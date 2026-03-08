@@ -261,7 +261,7 @@ export default function SearchPage() {
             </section>
           ) : null}
 
-          {hasLoadedResults ? <ResultList results={response.results} /> : null}
+          {hasLoadedResults ? <ResultList results={response.results} query={submittedQuery} /> : null}
 
           {hasLoadedResults && response.results.length > 0 ? (
             <section className="row load-more-row">

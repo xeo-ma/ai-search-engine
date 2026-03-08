@@ -187,6 +187,13 @@ button:disabled {
   background: #eef3fa;
 }
 
+.snippet-highlight {
+  background: #f3f6fb;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+
 .result-item:first-child {
   border-top: 0;
   padding-top: 0;
