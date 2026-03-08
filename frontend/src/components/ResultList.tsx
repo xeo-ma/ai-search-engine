@@ -16,7 +16,7 @@ export function ResultList({ results }: { results: SearchItem[] }) {
     <section className="card stack">
       <h2>Results</h2>
       {results.length === 0 ? (
-        <p className="muted">Results will appear here after search.</p>
+        <p className="muted">No results found. Try another query.</p>
       ) : (
         results.map((result) => (
           <article key={result.id} className="result-item stack">

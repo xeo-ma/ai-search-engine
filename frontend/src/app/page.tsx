@@ -38,6 +38,14 @@ function appendUniqueResults(existing: SearchItem[], incoming: SearchItem[]): Se
   return merged;
 }
 
+function withRetryHint(message: string): string {
+  const normalized = message.trim();
+  if (/try again\.?$/i.test(normalized)) {
+    return normalized;
+  }
+  return `${normalized} Please try again.`;
+}
+
 export default function SearchPage() {
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
@@ -130,7 +138,7 @@ export default function SearchPage() {
         return;
       }
       const message = err instanceof Error ? err.message : 'Search request failed';
-      setError(message);
+      setError(withRetryHint(message));
       setResponse(EMPTY_RESPONSE);
       setResultsLoading(false);
       setSummaryStatus('idle');
