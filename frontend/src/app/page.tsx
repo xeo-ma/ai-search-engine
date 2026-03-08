@@ -180,7 +180,7 @@ export default function SearchPage() {
               loading={resultsLoading}
               compact
             />
-            <p className="muted">Showing results for: "{submittedQuery}"</p>
+            <p className="muted">Results for: "{submittedQuery}"</p>
           </section>
 
           {resultsLoading ? (
