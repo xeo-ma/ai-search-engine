@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ErrorState } from '../components/ErrorState';
 import { ResultList } from '../components/ResultList';
@@ -51,13 +51,27 @@ export default function SearchPage() {
   const [hasMoreResults, setHasMoreResults] = useState(false);
   const [response, setResponse] = useState<SearchResponse>(EMPTY_RESPONSE);
   const activeSearchIdRef = useRef(0);
+  const hasInitializedFromUrlRef = useRef(false);
   const hasLoadedResults = isResultsView && !resultsLoading && !error;
 
-  async function onSearch(nextQuery?: string): Promise<void> {
+  async function onSearch(
+    nextQuery?: string,
+    options: { updateUrl?: boolean; replaceUrl?: boolean } = {},
+  ): Promise<void> {
     const trimmedQuery = (nextQuery ?? query).trim();
     if (!trimmedQuery) {
       return;
     }
+
+    if (options.updateUrl !== false && typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('q', trimmedQuery);
+      const nextSearch = params.toString();
+      const nextUrl = nextSearch ? `/?${nextSearch}` : '/';
+      const method = options.replaceUrl ? 'replaceState' : 'pushState';
+      window.history[method](null, '', nextUrl);
+    }
+
     const searchId = activeSearchIdRef.current + 1;
     activeSearchIdRef.current = searchId;
 
@@ -122,6 +136,22 @@ export default function SearchPage() {
       setSummaryStatus('idle');
     }
   }
+
+  useEffect(() => {
+    if (hasInitializedFromUrlRef.current || typeof window === 'undefined') {
+      return;
+    }
+    hasInitializedFromUrlRef.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    const queryFromUrl = (params.get('q') ?? '').trim();
+    if (!queryFromUrl) {
+      return;
+    }
+
+    setQuery(queryFromUrl);
+    void onSearch(queryFromUrl, { updateUrl: false });
+  }, []);
 
   async function onLoadMore(): Promise<void> {
     if (!submittedQuery || !hasMoreResults || isLoadingMore || resultsLoading) {
