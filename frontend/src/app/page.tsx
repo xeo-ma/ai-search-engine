@@ -2,12 +2,19 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { DefinitionCard } from '../components/DefinitionCard';
 import { ErrorState } from '../components/ErrorState';
 import { ResultList } from '../components/ResultList';
 import { SearchBar } from '../components/SearchBar';
 import { SummaryCard } from '../components/SummaryCard';
 import type { SearchItem } from '../lib/api-client';
-import { searchApi, summarizeApi, type SearchResponse } from '../lib/api-client';
+import {
+  defineApi,
+  searchApi,
+  summarizeApi,
+  type DefinitionResponse,
+  type SearchResponse,
+} from '../lib/api-client';
 
 const EMPTY_RESPONSE: SearchResponse = {
   query: '',
@@ -18,6 +25,7 @@ const EMPTY_RESPONSE: SearchResponse = {
   results: [],
 };
 const PAGE_SIZE = 10;
+const LETTERS_ONLY_PATTERN = /^[a-zA-Z]+$/;
 
 function appendUniqueResults(existing: SearchItem[], incoming: SearchItem[]): SearchItem[] {
   if (incoming.length === 0) {
@@ -46,6 +54,45 @@ function withRetryHint(message: string): string {
   return `${normalized} Please try again.`;
 }
 
+function isDefinitionQuery(query: string): boolean {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) {
+    return false;
+  }
+
+  if (trimmed.startsWith('define ')) {
+    return true;
+  }
+
+  if (trimmed.includes('definition of') || trimmed.includes('meaning of')) {
+    return true;
+  }
+
+  return LETTERS_ONLY_PATTERN.test(trimmed);
+}
+
+function extractDefinitionWord(query: string): string | null {
+  const trimmed = query.trim();
+  const lowered = trimmed.toLowerCase();
+
+  if (lowered.startsWith('define ')) {
+    const candidate = trimmed.slice(7).trim();
+    const match = candidate.match(/[a-zA-Z]+/);
+    return match ? match[0].toLowerCase() : null;
+  }
+
+  const phraseMatch = trimmed.match(/(?:definition of|meaning of)\s+([a-zA-Z]+)/i);
+  if (phraseMatch?.[1]) {
+    return phraseMatch[1].toLowerCase();
+  }
+
+  if (LETTERS_ONLY_PATTERN.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+
+  return null;
+}
+
 export default function SearchPage() {
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
@@ -55,6 +102,8 @@ export default function SearchPage() {
   const [summaryStatus, setSummaryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [definition, setDefinition] = useState<DefinitionResponse | null>(null);
+  const [definitionLoading, setDefinitionLoading] = useState(false);
   const [nextPageOffset, setNextPageOffset] = useState(0);
   const [hasMoreResults, setHasMoreResults] = useState(false);
   const [response, setResponse] = useState<SearchResponse>(EMPTY_RESPONSE);
@@ -88,12 +137,27 @@ export default function SearchPage() {
     setSubmittedQuery(trimmedQuery);
     setError(null);
     setLoadMoreError(null);
+    setDefinition(null);
+    setDefinitionLoading(false);
     setResultsLoading(true);
     setIsLoadingMore(false);
     setNextPageOffset(0);
     setHasMoreResults(false);
     setSummaryStatus('idle');
     setResponse(EMPTY_RESPONSE);
+
+    const definitionWord = isDefinitionQuery(trimmedQuery) ? extractDefinitionWord(trimmedQuery) : null;
+    if (definitionWord) {
+      setDefinitionLoading(true);
+      void (async () => {
+        const definitionData = await defineApi(definitionWord);
+        if (activeSearchIdRef.current !== searchId) {
+          return;
+        }
+        setDefinition(definitionData);
+        setDefinitionLoading(false);
+      })();
+    }
 
     try {
       const data = await searchApi({ query: trimmedQuery, safeMode: true, count: PAGE_SIZE, offset: 0 });
@@ -228,6 +292,14 @@ export default function SearchPage() {
           ) : null}
 
           <ErrorState message={error} />
+
+          {hasLoadedResults && definitionLoading ? (
+            <section className="card">
+              <p className="muted">Looking up definition...</p>
+            </section>
+          ) : null}
+
+          {hasLoadedResults && definition ? <DefinitionCard definition={definition} /> : null}
 
           {hasLoadedResults && summaryStatus === 'loading' ? (
             <section className="card stack">

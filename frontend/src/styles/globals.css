@@ -163,6 +163,28 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.definition-meta {
+  gap: 8px;
+}
+
+.pronunciation-icon-button {
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef3fa;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.pronunciation-icon-button:hover:not(:disabled) {
+  background: #e5edf8;
+}
+
 .load-more-row {
   justify-content: center;
 }

@@ -33,10 +33,21 @@ export interface SummarizeResponse {
   summaryError?: string | null;
 }
 
+export interface DefinitionResponse {
+  word: string;
+  phonetic?: string;
+  partOfSpeech?: string;
+  definition: string;
+  example?: string;
+  audioUrl?: string;
+}
+
 const SEARCH_ENDPOINT = '/api/search';
 const SUMMARIZE_ENDPOINT = '/api/summarize';
+const DEFINE_ENDPOINT = '/api/define';
 const SEARCH_TIMEOUT_MS = 15000;
 const SUMMARIZE_TIMEOUT_MS = 25000;
+const DEFINE_TIMEOUT_MS = 12000;
 const NETWORK_RETRY_DELAY_MS = 300;
 const SUMMARY_UNAVAILABLE_MESSAGE = 'AI summary unavailable right now.';
 
@@ -144,4 +155,36 @@ export async function summarizeApi(payload: SummarizeRequest): Promise<Summarize
   }
 
   return { summary: null, summaryError: SUMMARY_UNAVAILABLE_MESSAGE };
+}
+
+export async function defineApi(word: string): Promise<DefinitionResponse | null> {
+  const trimmedWord = word.trim();
+  if (!trimmedWord) {
+    return null;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), DEFINE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${DEFINE_ENDPOINT}?word=${encodeURIComponent(trimmedWord)}`, {
+      method: 'GET',
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as DefinitionResponse;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }

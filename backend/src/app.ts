@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 
 import { searchRoute } from './routes/search.route.js';
+import { ttsRoute } from './routes/tts.route.js';
 
 export function createApp(): FastifyInstance {
   const app = Fastify({ logger: true });
@@ -27,6 +28,7 @@ export function createApp(): FastifyInstance {
 
   app.get('/health', async () => ({ ok: true }));
   app.register(searchRoute);
+  app.register(ttsRoute);
 
   return app;
 }
