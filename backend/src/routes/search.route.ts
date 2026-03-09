@@ -50,6 +50,7 @@ export const searchRoute: FastifyPluginAsync = async (app) => {
         summary: result.summary,
         summaryError: result.error,
         sources: result.sources,
+        claims: result.claims,
       });
     } catch (error) {
       if (error instanceof ZodError) {

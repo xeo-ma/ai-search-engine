@@ -133,6 +133,93 @@ button:disabled {
   gap: 10px;
 }
 
+.summary-text {
+  line-height: 1.58;
+}
+
+.evidence-toggle {
+  width: fit-content;
+  min-height: auto;
+  padding: 0;
+  background: transparent;
+  color: var(--primary);
+  border: 0;
+  border-radius: 0;
+}
+
+.claim-list {
+  gap: 14px;
+}
+
+.claim-row {
+  gap: 8px;
+  padding-left: 10px;
+  border-left: 2px solid #e8eef7;
+}
+
+.claim-row + .claim-row {
+  padding-top: 10px;
+  border-top: 1px solid #eff4fb;
+}
+
+.claim-label {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.claim-text {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.claim-evidence {
+  gap: 8px;
+}
+
+.evidence-list {
+  gap: 8px;
+}
+
+.evidence-item {
+  display: grid;
+  gap: 3px;
+  padding-top: 7px;
+  border-top: 1px solid #edf2f8;
+}
+
+.evidence-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.evidence-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  line-height: 1.35;
+}
+
+.evidence-head strong {
+  font-size: 0.94rem;
+}
+
+.evidence-snippet {
+  margin: 0;
+  line-height: 1.45;
+  font-size: 0.9rem;
+}
+
+.evidence-link {
+  width: fit-content;
+  font-size: 0.9rem;
+}
+
 .skeleton-line {
   display: block;
   height: 12px;

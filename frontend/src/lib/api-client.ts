@@ -11,7 +11,8 @@ export interface SearchResponse {
   safeModeApplied: boolean;
   summary: string | null;
   summaryError?: string | null;
-  sources: Array<{ title: string; url: string }>;
+  sources: SummarySourceLink[];
+  claims: SummaryClaim[];
   results: SearchItem[];
   moreResultsAvailable?: boolean;
 }
@@ -31,7 +32,24 @@ export interface SummarizeRequest {
 export interface SummarizeResponse {
   summary: string | null;
   summaryError?: string | null;
-  sources?: Array<{ title: string; url: string }>;
+  sources?: SummarySourceLink[];
+  claims?: SummaryClaim[];
+}
+
+export interface SummarySourceLink {
+  id?: string;
+  title: string;
+  url: string;
+  domain?: string;
+  snippet?: string;
+  sourceType?: 'web' | 'file' | 'unknown';
+  sourceIndex?: number;
+}
+
+export interface SummaryClaim {
+  id: string;
+  text: string;
+  evidence: SummarySourceLink[];
 }
 
 export interface DefinitionResponse {
@@ -54,6 +72,19 @@ const SUMMARY_UNAVAILABLE_MESSAGE = 'AI summary unavailable right now.';
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldRetrySummarizeNetworkError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  if (error.name === 'AbortError') {
+    return false;
+  }
+
+  // Browser fetch network failures typically surface as TypeError.
+  return error instanceof TypeError;
 }
 
 export async function searchApi(payload: SearchRequest): Promise<SearchResponse> {
@@ -130,26 +161,40 @@ export async function summarizeApi(payload: SummarizeRequest): Promise<Summarize
       });
 
       if (!response.ok) {
+        const contentType = response.headers.get('content-type') ?? '';
+        let backendMessage: string | null = null;
+        if (contentType.includes('application/json')) {
+          const body = (await response.json()) as { message?: string };
+          backendMessage = typeof body.message === 'string' && body.message.trim() ? body.message.trim() : null;
+        } else {
+          const bodyText = await response.text();
+          backendMessage = bodyText.trim() || null;
+        }
+
         if (response.status >= 500 && attempt === 0) {
           await sleep(NETWORK_RETRY_DELAY_MS);
           continue;
         }
 
-        return { summary: null, summaryError: SUMMARY_UNAVAILABLE_MESSAGE };
+        return { summary: null, summaryError: backendMessage ?? SUMMARY_UNAVAILABLE_MESSAGE };
       }
 
       return (await response.json()) as SummarizeResponse;
     } catch (error) {
-      if (attempt === 0) {
+      if (attempt === 0 && shouldRetrySummarizeNetworkError(error)) {
         await sleep(NETWORK_RETRY_DELAY_MS);
         continue;
       }
 
       if (error instanceof Error && error.name === 'AbortError') {
-        return { summary: null, summaryError: SUMMARY_UNAVAILABLE_MESSAGE };
+        return { summary: null, summaryError: 'AI summary timed out. Please try again.' };
       }
 
-      return { summary: null, summaryError: SUMMARY_UNAVAILABLE_MESSAGE };
+      if (error instanceof Error && error.message.trim()) {
+        return { summary: null, summaryError: error.message.trim() };
+      }
+
+      return { summary: null, summaryError: 'Unable to reach summarization service. Please try again.' };
     } finally {
       clearTimeout(timeout);
     }

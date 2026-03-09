@@ -22,6 +22,7 @@ const EMPTY_RESPONSE: SearchResponse = {
   summary: null,
   summaryError: null,
   sources: [],
+  claims: [],
   results: [],
 };
 const PAGE_SIZE = 10;
@@ -179,6 +180,7 @@ export default function SearchPage() {
         ...data,
         summary: null,
         summaryError: null,
+        claims: [],
       });
       setResultsLoading(false);
       setNextPageOffset(1);
@@ -205,8 +207,9 @@ export default function SearchPage() {
           summary: summaryData.summary,
           summaryError: summaryData.summaryError ?? null,
           sources: summaryData.sources ?? previous.sources,
+          claims: summaryData.claims ?? [],
         }));
-        setSummaryStatus(summaryData.summary ? 'ready' : 'error');
+        setSummaryStatus(summaryData.summary || (summaryData.claims?.length ?? 0) > 0 ? 'ready' : 'error');
       })();
     } catch (err) {
       if (activeSearchIdRef.current !== searchId) {
@@ -324,7 +327,7 @@ export default function SearchPage() {
           ) : null}
 
           {hasLoadedResults && summaryStatus === 'ready' && response.summary ? (
-            <SummaryCard summary={response.summary} sources={response.sources} />
+            <SummaryCard summary={response.summary} sources={response.sources} claims={response.claims} />
           ) : null}
 
           {hasLoadedResults && summaryStatus === 'error' ? (
