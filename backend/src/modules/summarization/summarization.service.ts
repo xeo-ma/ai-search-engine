@@ -10,10 +10,14 @@ const CITATION_MARKER_PATTERN = /\s*\[\d+\]/g;
 const LETTERS_ONLY_PATTERN = /^[a-zA-Z]+$/;
 const WEAK_SOURCE_TEXT_PATTERN =
   /\b(sign in|signin|log in|login|register|create account|subscribe|cookie policy|privacy policy|terms of service|access denied|404)\b/i;
+const COMMERCIAL_SOURCE_TEXT_PATTERN =
+  /\b(company|taproom|kitchen|menu|shop|store|pricing|plans|book now|buy now|trial|broker|trading|official site)\b/i;
 const ENTERTAINMENT_DOMAIN_PATTERN =
   /(?:^|\.)((youtube|imdb|spotify|netflix|hulu|genius|fandom|songfacts)\.com)$/i;
 const DICTIONARY_DOMAIN_PATTERN =
   /(?:^|\.)((dictionaryapi\.dev|dictionary\.com|merriam-webster\.com|cambridge\.org|oxfordlearnersdictionaries\.com|vocabulary\.com))$/i;
+const LEXICAL_SOURCE_TEXT_PATTERN =
+  /\b(definition|meaning|etymology|usage|word origin|part of speech|noun|verb|adjective|linguistics)\b/i;
 const AUTHORITY_DOMAIN_SCORES: Array<[RegExp, number]> = [
   [/(?:^|\.)wikipedia\.org$/i, 3],
   [/(?:^|\.)britannica\.com$/i, 3],
@@ -147,8 +151,18 @@ export class SummarizationService {
       return results;
     }
 
+    const lexicalPreferred = results.filter(
+      (result) =>
+        !this.isEntertainmentDomain(result.url) &&
+        !this.isLikelyCommercialSource(result) &&
+        (this.isDictionaryDomain(result.url) || this.isLexicalSource(result)),
+    );
+    if (lexicalPreferred.length >= 2) {
+      return lexicalPreferred;
+    }
+
     const informational = results.filter(
-      (result) => !this.isEntertainmentDomain(result.url) && !this.isDictionaryDomain(result.url),
+      (result) => !this.isEntertainmentDomain(result.url) && !this.isLikelyCommercialSource(result),
     );
     if (informational.length >= 2) {
       return informational;
@@ -183,8 +197,18 @@ export class SummarizationService {
     score += this.queryOverlapScore(result, queryTokens) * 8;
     score += this.authorityScore(result.url);
 
-    if (definitionLikeQuery && this.isEntertainmentDomain(result.url)) {
-      score -= 2.5;
+    if (definitionLikeQuery) {
+      if (this.isDictionaryDomain(result.url) || this.isLexicalSource(result)) {
+        score += 1.5;
+      }
+
+      if (this.isLikelyCommercialSource(result)) {
+        score -= 3;
+      }
+
+      if (this.isEntertainmentDomain(result.url)) {
+        score -= 2.5;
+      }
     }
 
     if (result.description.trim().length < 50) {
@@ -251,6 +275,16 @@ export class SummarizationService {
     } catch {
       return false;
     }
+  }
+
+  private isLexicalSource(result: SummarySource): boolean {
+    const text = `${result.title} ${result.description}`;
+    return LEXICAL_SOURCE_TEXT_PATTERN.test(text);
+  }
+
+  private isLikelyCommercialSource(result: SummarySource): boolean {
+    const text = `${result.title} ${result.description} ${result.url}`;
+    return COMMERCIAL_SOURCE_TEXT_PATTERN.test(text);
   }
 
   private isLikelyDefinitionQuery(query: string): boolean {

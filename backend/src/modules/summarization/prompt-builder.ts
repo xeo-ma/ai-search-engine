@@ -29,6 +29,7 @@ export function buildSummarizationPrompt(
     ? [
         'A separate Definition card already covers the direct dictionary meaning.',
         'Do not restate the basic dictionary definition.',
+        'Start with contextual significance or real-world role, not a dictionary-style opening sentence.',
         'Add broader context, significance, or practical importance from the sources.',
         'Write 2 to 3 sentences total.',
       ]

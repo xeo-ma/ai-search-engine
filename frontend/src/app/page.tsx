@@ -27,6 +27,7 @@ const EMPTY_RESPONSE: SearchResponse = {
 const PAGE_SIZE = 10;
 const LETTERS_ONLY_PATTERN = /^[a-zA-Z]+$/;
 const MIN_DEFINITION_WORD_LENGTH = 2;
+const ACRONYM_PRIORITY_QUERIES = new Set(['ai']);
 
 function appendUniqueResults(existing: SearchItem[], incoming: SearchItem[]): SearchItem[] {
   if (incoming.length === 0) {
@@ -61,6 +62,10 @@ function isDefinitionQuery(query: string): boolean {
     return false;
   }
 
+  if (ACRONYM_PRIORITY_QUERIES.has(trimmed)) {
+    return false;
+  }
+
   if (trimmed.startsWith('define ')) {
     return true;
   }
@@ -75,6 +80,10 @@ function isDefinitionQuery(query: string): boolean {
 function extractDefinitionWord(query: string): string | null {
   const trimmed = query.trim();
   const lowered = trimmed.toLowerCase();
+
+  if (ACRONYM_PRIORITY_QUERIES.has(lowered)) {
+    return null;
+  }
 
   if (lowered.startsWith('define ')) {
     const candidate = trimmed.slice(7).trim();
