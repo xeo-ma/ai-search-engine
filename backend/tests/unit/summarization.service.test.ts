@@ -93,3 +93,167 @@ test('definition-style summaries are normalized to at most 3 sentences', async (
   assert.equal(out.summary, 'One. Two. Three.');
 });
 
+test('definition-style summaries collapse duplicate definition sentences and normalize appositive phrasing', async () => {
+  const provider = new StubProvider(
+    [
+      'Physics, science that deals with the structure of matter and the interactions between the fundamental constituents of the observable universe.',
+      'Physics is the scientific study of matter, its fundamental constituents, its motion and behavior through space and time, and the related entities of energy and force.',
+    ].join(' '),
+  );
+  const service = new SummarizationService({ provider });
+
+  const results = [
+    makeSource(
+      '1',
+      'Physics | Britannica',
+      'https://www.britannica.com/science/physics-science',
+      'Physics, science that deals with the structure of matter and the interactions between the fundamental constituents of the observable universe.',
+    ),
+    makeSource(
+      '2',
+      'Physics - Wikipedia',
+      'https://en.wikipedia.org/wiki/Physics',
+      'Physics is the scientific study of matter, its fundamental constituents, its motion and behavior through space and time, and the related entities of energy and force.',
+    ),
+  ];
+
+  const out = await service.summarize('physics', results);
+  assert.equal(
+    out.summary,
+    'physics is the science that deals with the structure of matter and the interactions between the fundamental constituents of the observable universe.',
+  );
+});
+
+test('evidence selection avoids repeating the exact same source across adjacent claims when alternatives exist', async () => {
+  const provider = new StubProvider('Claim one sentence. Claim two sentence.');
+  const service = new SummarizationService({ provider });
+
+  const results = [
+    makeSource(
+      '1',
+      'OpenAI',
+      'https://openai.com',
+      'OpenAI builds and deploys AI systems for broad use.',
+    ),
+    makeSource(
+      '2',
+      'Google Gemini',
+      'https://gemini.google.com',
+      'Gemini is a generative assistant from Google.',
+    ),
+    makeSource(
+      '3',
+      'Wikipedia: Artificial intelligence',
+      'https://en.wikipedia.org/wiki/Artificial_intelligence',
+      'Artificial intelligence is intelligence demonstrated by machines.',
+    ),
+  ];
+
+  const out = await service.summarize('ai', results);
+  assert.ok(out.claims.length >= 2);
+
+  const firstClaimPrimary = out.claims[0]?.evidence[0]?.url;
+  const secondClaimPrimary = out.claims[1]?.evidence[0]?.url;
+  assert.ok(firstClaimPrimary);
+  assert.ok(secondClaimPrimary);
+  assert.notEqual(firstClaimPrimary, secondClaimPrimary);
+});
+
+test('source selection keeps at least one reference source when available for broad queries', async () => {
+  const provider = new StubProvider('AI claim one. AI claim two.');
+  const service = new SummarizationService({ provider });
+
+  const results = [
+    makeSource('1', 'OpenAI', 'https://openai.com', 'OpenAI develops AI systems and tools.'),
+    makeSource('2', 'Google Gemini', 'https://gemini.google.com', 'Gemini is a generative AI assistant.'),
+    makeSource('3', 'ChatGPT', 'https://chatgpt.com', 'ChatGPT helps users write and solve problems.'),
+    makeSource(
+      '4',
+      'Wikipedia: Artificial intelligence',
+      'https://en.wikipedia.org/wiki/Artificial_intelligence',
+      'Artificial intelligence is intelligence demonstrated by machines.',
+    ),
+  ];
+
+  const out = await service.summarize('ai', results);
+  assert.ok(out.sources.length >= 1);
+  assert.ok(out.sources.some((source) => source.url.includes('wikipedia.org')));
+});
+
+test('claim extraction merges punctuation-led fragments into the previous claim', async () => {
+  const provider = new StubProvider(
+    [
+      'As one of the most fundamental scientific disciplines, physics drives research and innovation.',
+      ', shedding light on how network architecture shapes neural-network learning.',
+    ].join('\n'),
+  );
+  const service = new SummarizationService({ provider });
+
+  const results = [
+    makeSource(
+      '1',
+      'Physics - Wikipedia',
+      'https://en.wikipedia.org/wiki/Physics',
+      'Physics is the scientific study of matter, motion, and energy.',
+    ),
+    makeSource(
+      '2',
+      'Britannica: Physics',
+      'https://www.britannica.com/science/physics-science',
+      'Physics deals with the structure of matter and fundamental interactions.',
+    ),
+  ];
+
+  const out = await service.summarize('physics', results);
+  assert.equal(out.claims.length, 1);
+  assert.ok(!out.claims[0].text.startsWith(','));
+  assert.ok(!out.claims.some((claim) => /^,/.test(claim.text)));
+});
+
+test('fallback summary avoids truncated ellipsis fragments', async () => {
+  const service = new SummarizationService();
+
+  const results = [
+    makeSource(
+      '1',
+      'Physics | Britannica',
+      'https://www.britannica.com/science/physics-science',
+      'Physics, science that deals with matter and energy. Its scope of study encompasses not only behavior under forces but also...',
+    ),
+    makeSource(
+      '2',
+      'Physics - Wikipedia',
+      'https://en.wikipedia.org/wiki/Physics',
+      'Physics is the scientific study of matter, motion and energy.',
+    ),
+  ];
+
+  const out = await service.summarize('physics', results);
+  assert.ok(out.summary);
+  assert.ok(!out.summary.includes('...'));
+});
+
+test('fallback summary uses lightweight contextual phrasing for term queries', async () => {
+  const service = new SummarizationService();
+
+  const results = [
+    makeSource(
+      '1',
+      'Time - Wikipedia',
+      'https://en.wikipedia.org/wiki/Time',
+      'Time is the continuous progression of existence that occurs in an apparently irreversible succession from the past, through the present, and into the future.',
+    ),
+    makeSource(
+      '2',
+      'Britannica: Time',
+      'https://www.britannica.com/science/time',
+      'Time is a measured or measurable period, a continuum that lacks spatial dimensions.',
+    ),
+  ];
+
+  const out = await service.summarize('time', results);
+  assert.ok(out.summary);
+  assert.ok(out.summary.startsWith('In general usage, time is'));
+  assert.ok(out.summary.includes('Reference sources generally describe this concept in similar terms.'));
+  assert.ok(out.claims.every((claim) => !claim.text.toLowerCase().startsWith('reference sources')));
+});
