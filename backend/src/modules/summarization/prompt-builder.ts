@@ -4,6 +4,7 @@ const MAX_SUMMARY_SOURCES = 5;
 
 interface BuildPromptOptions {
   ambiguousQuery?: boolean;
+  definitionStyleQuery?: boolean;
 }
 
 export function buildSummarizationPrompt(
@@ -24,26 +25,38 @@ export function buildSummarizationPrompt(
     })
     .join('\n\n');
 
+  const definitionContextInstructions = options.definitionStyleQuery
+    ? [
+        'A separate Definition card already covers the direct dictionary meaning.',
+        'Do not restate the basic dictionary definition.',
+        'Add broader context, significance, or practical importance from the sources.',
+        'Write 2 to 3 sentences total.',
+      ]
+    : [];
+
   const modeInstructions = options.ambiguousQuery
     ? [
         'The query appears ambiguous across multiple meanings in the sources.',
-        'Do not force a single definition.',
-        'Write one short paragraph of 2 to 4 sentences.',
-        'Summarize the main distinct meanings shown by the sources.',
-        'If meanings conflict, state that clearly and keep each sentence tightly grounded.',
+        'Lead with the dominant/common meaning from the strongest sources.',
+        'If needed, add one brief sentence that the term can also refer to other contexts.',
+        'Do not stitch together unrelated entities or entertainment references.',
+        ...(options.definitionStyleQuery ? [] : ['Write one short paragraph of 2 to 4 sentences.']),
       ]
     : [
-        'Write one short paragraph of 2 to 4 sentences.',
+        ...(options.definitionStyleQuery ? [] : ['Write one short paragraph of 2 to 4 sentences.']),
         'Keep sentences compact and search-native.',
-        'Summarize the dominant meaning from the highest-ranked sources.',
+        'Prioritize the dominant/common meaning from the highest-ranked sources.',
+        'Avoid listing unrelated entities or edge-case interpretations.',
       ];
 
   return [
     'You are generating a concise, neutral web-search summary.',
+    ...definitionContextInstructions,
     ...modeInstructions,
     'Use only facts explicitly present in the source snippets below.',
     'Do not infer, generalize, or add background knowledge beyond the snippets.',
     'Keep a neutral, factual tone.',
+    'Prefer high-information, authoritative sources in tone and content.',
     'Do not write as a chatbot and do not address the user directly.',
     'Do not include inline citation markers such as [1] or [2].',
     'Do not invent facts and do not include markdown headings.',

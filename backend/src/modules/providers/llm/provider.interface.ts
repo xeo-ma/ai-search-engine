@@ -9,6 +9,7 @@ export interface SummarizeInput {
   query: string;
   results: SummarySource[];
   ambiguousQuery?: boolean;
+  definitionStyleQuery?: boolean;
 }
 
 export interface LlmSummarizationProvider {

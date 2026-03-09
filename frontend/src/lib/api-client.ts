@@ -31,6 +31,7 @@ export interface SummarizeRequest {
 export interface SummarizeResponse {
   summary: string | null;
   summaryError?: string | null;
+  sources?: Array<{ title: string; url: string }>;
 }
 
 export interface DefinitionResponse {

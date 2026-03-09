@@ -26,6 +26,7 @@ const EMPTY_RESPONSE: SearchResponse = {
 };
 const PAGE_SIZE = 10;
 const LETTERS_ONLY_PATTERN = /^[a-zA-Z]+$/;
+const MIN_DEFINITION_WORD_LENGTH = 2;
 
 function appendUniqueResults(existing: SearchItem[], incoming: SearchItem[]): SearchItem[] {
   if (incoming.length === 0) {
@@ -68,7 +69,7 @@ function isDefinitionQuery(query: string): boolean {
     return true;
   }
 
-  return LETTERS_ONLY_PATTERN.test(trimmed);
+  return LETTERS_ONLY_PATTERN.test(trimmed) && trimmed.length >= MIN_DEFINITION_WORD_LENGTH;
 }
 
 function extractDefinitionWord(query: string): string | null {
@@ -194,6 +195,7 @@ export default function SearchPage() {
           ...previous,
           summary: summaryData.summary,
           summaryError: summaryData.summaryError ?? null,
+          sources: summaryData.sources ?? previous.sources,
         }));
         setSummaryStatus(summaryData.summary ? 'ready' : 'error');
       })();

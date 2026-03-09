@@ -114,7 +114,7 @@ export class SearchService {
       });
     }
 
-    const sources = results.slice(0, 5).map((result) => ({
+    const sources = results.slice(0, 3).map((result) => ({
       title: result.title,
       url: result.url,
     }));

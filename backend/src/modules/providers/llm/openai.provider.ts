@@ -36,7 +36,12 @@ export class OpenAiSummarizationProvider implements LlmSummarizationProvider {
     const prompt = buildSummarizationPrompt(
       input.query,
       input.results,
-      typeof input.ambiguousQuery === 'boolean' ? { ambiguousQuery: input.ambiguousQuery } : {},
+      {
+        ...(typeof input.ambiguousQuery === 'boolean' ? { ambiguousQuery: input.ambiguousQuery } : {}),
+        ...(typeof input.definitionStyleQuery === 'boolean'
+          ? { definitionStyleQuery: input.definitionStyleQuery }
+          : {}),
+      },
     );
 
     const controller = new AbortController();

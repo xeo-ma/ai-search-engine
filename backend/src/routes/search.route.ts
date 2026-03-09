@@ -49,6 +49,7 @@ export const searchRoute: FastifyPluginAsync = async (app) => {
       return reply.send({
         summary: result.summary,
         summaryError: result.error,
+        sources: result.sources,
       });
     } catch (error) {
       if (error instanceof ZodError) {
