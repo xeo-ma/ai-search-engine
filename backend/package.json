@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"No test runner configured yet\""
+    "test": "tsx --test tests/**/*.test.ts"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
