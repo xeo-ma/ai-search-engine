@@ -146,35 +146,37 @@ export function DefinitionCard({ definition }: DefinitionCardProps) {
   return (
     <section className="card stack">
       <h2>Definition</h2>
-      <div className="definition-meta row">
-        <strong>{definition.word}</strong>
-        {definition.phonetic ? <span className="muted">{definition.phonetic}</span> : null}
-        {definition.partOfSpeech ? <span className="muted">{definition.partOfSpeech}</span> : null}
-        <button
-          type="button"
-          className="pronunciation-icon-button"
-          disabled={isPlaying}
-          aria-label={isPlaying ? 'Playing pronunciation' : 'Play pronunciation'}
-          title={isPlaying ? 'Playing pronunciation' : 'Play pronunciation'}
-          onClick={() => {
-            void playText(definition.word);
-          }}
-        >
-          <span aria-hidden="true">
-            {isPlaying ? (
-              <svg viewBox="0 0 24 24" width="16" height="16" focusable="false">
-                <circle cx="12" cy="12" r="7" fill="currentColor" />
-              </svg>
-            ) : (
+      <div className="definition-header">
+        <div className="definition-term-group">
+          <strong className="definition-term">{definition.word}</strong>
+          <button
+            type="button"
+            className={`pronunciation-icon-button${isPlaying ? ' is-playing' : ''}`}
+            disabled={isPlaying}
+            aria-label={isPlaying ? 'Playing pronunciation' : 'Play pronunciation'}
+            title={isPlaying ? 'Playing pronunciation' : 'Play pronunciation'}
+            aria-busy={isPlaying}
+            onClick={() => {
+              void playText(definition.word);
+            }}
+          >
+            <span aria-hidden="true">
               <svg viewBox="0 0 24 24" width="16" height="16" focusable="false">
                 <path
                   d="M3 10v4h4l5 4V6L7 10H3zm12.5 2a3.5 3.5 0 0 0-2-3.15v6.3a3.5 3.5 0 0 0 2-3.15zm0-7a1 1 0 1 1 1.41-1.41A11 11 0 0 1 20 12a11 11 0 0 1-3.09 8.41 1 1 0 1 1-1.41-1.41A9 9 0 0 0 18 12a9 9 0 0 0-2.5-6z"
                   fill="currentColor"
                 />
               </svg>
-            )}
-          </span>
-        </button>
+            </span>
+          </button>
+        </div>
+        {definition.phonetic || definition.partOfSpeech ? (
+          <div className="definition-subline">
+            {definition.phonetic ? <span>{definition.phonetic}</span> : null}
+            {definition.phonetic && definition.partOfSpeech ? <span aria-hidden="true">·</span> : null}
+            {definition.partOfSpeech ? <span>{definition.partOfSpeech}</span> : null}
+          </div>
+        ) : null}
       </div>
 
       <p>{definition.definition}</p>
