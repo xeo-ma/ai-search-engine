@@ -5,9 +5,10 @@ This project is a minimal web search application with an AI summary layer. Users
 
 ## Architecture Overview
 - Frontend (`frontend/`): Next.js app that renders the search UI, results page, summary card, and load-more flow.
-- Backend (`backend/`): Fastify + TypeScript API exposing `/search` and `/summarize`.
+- Backend (`backend/`): Fastify + TypeScript API exposing `/search`, `/summarize`, and `/tts`.
 - Search provider integration: backend calls Brave Web Search and normalizes returned results.
 - AI summarization layer: backend uses OpenAI Responses API to generate summaries from top retrieved sources.
+- Definition + pronunciation layer: frontend resolves definition intent via `/api/define` and plays pronunciation via `/api/tts` backed by OpenAI TTS.
 
 ## Design Principles
 - Search-first user experience: the primary flow centers on query input and result retrieval before any secondary processing.
@@ -21,6 +22,8 @@ This project is a minimal web search application with an AI summary layer. Users
 - Web page with a search bar
 - Results page with web result cards
 - AI-generated summary with source links
+- Definition card for definition-style queries
+- Pronunciation playback (OpenAI TTS)
 - Safe-mode-first search behavior
 - Incremental result loading via "Load more results"
 
@@ -45,6 +48,8 @@ This project is a minimal web search application with an AI summary layer. Users
 3. Backend fetches and normalizes results from Brave Search, then returns results to the frontend.
 4. Frontend sends top results to `/api/summarize`, which forwards to backend `/summarize`.
 5. Backend generates a summary with OpenAI and returns it with sources for rendering.
+6. For definition-style queries, frontend also calls `/api/define` and renders a Definition card when data is available.
+7. Pronunciation button calls `/api/tts`, which forwards to backend `/tts` for OpenAI speech synthesis.
 
 ## Running the Project
 1. Install dependencies:
@@ -69,11 +74,14 @@ Create a `.env` file at the repository root.
 
 Required for backend:
 - `BRAVE_SEARCH_API_KEY`: Brave Search API key
-- `OPENAI_API_KEY`: OpenAI API key (used for AI summaries)
+- `OPENAI_API_KEY`: OpenAI API key (used for AI summaries and TTS)
 
 Optional:
 - `HOST`: backend host (default `0.0.0.0`)
 - `PORT`: backend port (default `3001`)
+- `OPENAI_TTS_MODEL`: TTS model (default `gpt-4o-mini-tts`)
+- `OPENAI_TTS_VOICE`: TTS voice (default `alloy`)
+- `OPENAI_TTS_RESPONSE_FORMAT`: TTS output format (default `wav`)
 - `BACKEND_BASE_URL`: frontend server-side proxy target (default `http://localhost:3001`)
 - `NEXT_PUBLIC_API_BASE_URL`: fallback frontend proxy target
 
