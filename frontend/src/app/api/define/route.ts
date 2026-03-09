@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 
-import { DictionaryApiProvider } from '../../../lib/definition-provider';
+import {
+  CompositeDefinitionProvider,
+  DatamuseDefinitionProvider,
+  DictionaryApiProvider,
+} from '../../../lib/definition-provider';
 
 const LETTERS_ONLY_PATTERN = /^[a-zA-Z]+$/;
 
@@ -14,7 +18,10 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const provider = new DictionaryApiProvider();
+    const provider = new CompositeDefinitionProvider([
+      new DictionaryApiProvider(),
+      new DatamuseDefinitionProvider(),
+    ]);
     const definition = await provider.define(word);
     if (!definition) {
       return NextResponse.json({ message: 'Definition not found' }, { status: 404 });

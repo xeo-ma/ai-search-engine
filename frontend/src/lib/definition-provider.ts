@@ -34,12 +34,19 @@ interface DictionaryEntryItem {
 }
 
 const DICTIONARY_BASE_URL = process.env.DICTIONARY_API_BASE_URL ?? 'https://api.dictionaryapi.dev/api/v2/entries/en';
+const DATAMUSE_BASE_URL = process.env.DATAMUSE_API_BASE_URL ?? 'https://api.datamuse.com/words';
 const ARCHAIC_HINT_PATTERN = /\b(obsolete|archaic|dated|historical|old-fashioned)\b/i;
 
 interface DefinitionCandidate {
   partOfSpeech?: string;
   definition: string;
   example?: string;
+}
+
+interface DatamuseEntryItem {
+  word?: string;
+  tags?: string[];
+  defs?: string[];
 }
 
 function normalizeAudioUrl(value: string | undefined): string | undefined {
@@ -155,5 +162,102 @@ export class DictionaryApiProvider implements DefinitionProvider {
     }
 
     return normalizeEntry(firstEntry);
+  }
+}
+
+function parseDatamusePartOfSpeech(tags: string[] | undefined): string | undefined {
+  if (!tags || tags.length === 0) {
+    return undefined;
+  }
+
+  const tag = tags.find((item) => item.startsWith('f:'));
+  if (!tag) {
+    return undefined;
+  }
+
+  const code = tag.slice(2).toLowerCase();
+  switch (code) {
+    case 'n':
+      return 'noun';
+    case 'v':
+      return 'verb';
+    case 'adj':
+      return 'adjective';
+    case 'adv':
+      return 'adverb';
+    default:
+      return undefined;
+  }
+}
+
+function normalizeDatamuseDefinition(word: string, entry: DatamuseEntryItem): NormalizedDefinition | null {
+  const defs = entry.defs ?? [];
+  if (defs.length === 0) {
+    return null;
+  }
+
+  const first = defs[0]?.trim();
+  if (!first) {
+    return null;
+  }
+
+  const definition = first.includes('\t') ? first.split('\t')[1]?.trim() : first;
+  if (!definition) {
+    return null;
+  }
+
+  return {
+    word,
+    partOfSpeech: parseDatamusePartOfSpeech(entry.tags),
+    definition,
+  };
+}
+
+export class DatamuseDefinitionProvider implements DefinitionProvider {
+  async define(word: string): Promise<NormalizedDefinition | null> {
+    const trimmedWord = word.trim().toLowerCase();
+    if (!trimmedWord) {
+      return null;
+    }
+
+    const params = new URLSearchParams();
+    params.set('sp', trimmedWord);
+    params.set('md', 'dpf');
+    params.set('max', '10');
+
+    const response = await fetch(`${DATAMUSE_BASE_URL}?${params.toString()}`, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as DatamuseEntryItem[];
+    const exact = payload.find((item) => item.word?.toLowerCase() === trimmedWord);
+    if (!exact) {
+      return null;
+    }
+
+    return normalizeDatamuseDefinition(trimmedWord, exact);
+  }
+}
+
+export class CompositeDefinitionProvider implements DefinitionProvider {
+  constructor(private readonly providers: DefinitionProvider[]) {}
+
+  async define(word: string): Promise<NormalizedDefinition | null> {
+    for (const provider of this.providers) {
+      try {
+        const definition = await provider.define(word);
+        if (definition) {
+          return definition;
+        }
+      } catch {}
+    }
+
+    return null;
   }
 }

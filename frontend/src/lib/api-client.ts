@@ -83,7 +83,6 @@ function shouldRetrySummarizeNetworkError(error: unknown): boolean {
     return false;
   }
 
-  // Browser fetch network failures typically surface as TypeError.
   return error instanceof TypeError;
 }
 

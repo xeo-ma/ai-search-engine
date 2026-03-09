@@ -20,7 +20,13 @@ const LEADING_FRAGMENT_PUNCTUATION_PATTERN = /^[,;:)\]-]/;
 const LEADING_FRAGMENT_CONNECTOR_PATTERN =
   /^(and|or|but|so|yet|because|while|whereas|which|who|whom|whose|that|including|such as)\b/;
 const COMMON_VERB_PATTERN =
-  /\b(is|are|was|were|be|being|been|has|have|had|do|does|did|can|could|will|would|should|may|might|must|include|includes|included|including|drive|drives|driven|study|studies|studied|help|helps|helped|power|powers|powered|focus|focuses|focused|frame|frames|framed|shed|sheds|shedding|call|called|refer|refers|referred|use|uses|used|support|supports|supported|enable|enables|enabled|show|shows|shown|explain|explains|explained|provide|provides|provided|underpin|underpins|underpinned)\b/i;
+  /\b(is|are|was|were|be|being|been|has|have|had|do|does|did|can|could|will|would|should|may|might|must|mean|means|meant|include|includes|included|including|drive|drives|driven|study|studies|studied|help|helps|helped|power|powers|powered|focus|focuses|focused|frame|frames|framed|shed|sheds|shedding|call|called|refer|refers|referred|use|uses|used|support|supports|supported|enable|enables|enabled|show|shows|shown|explain|explains|explained|provide|provides|provided|underpin|underpins|underpinned)\b/i;
+const LOW_INFORMATION_SNIPPET_PATTERN =
+  /\b(enter|click|sign in|log in|get started|learn more|read more|continue|subscribe|join now|try now|cannot provide a description|page unavailable|access denied|javascript required|enable cookies)\b/i;
+const INCOMPLETE_SENTENCE_END_PATTERN =
+  /\b(and|or|but|so|yet|including|such as|and even|as well as|especially|like)\b[\s,.!?;:]*$/i;
+const SUPPORT_SENTENCE_PATTERN =
+  /^(reference sources |across reference sources|authoritative references|top sources cover this topic)/i;
 const WEAK_SOURCE_TEXT_PATTERN =
   /\b(sign in|signin|log in|login|register|create account|subscribe|cookie policy|privacy policy|terms of service|access denied|404)\b/i;
 const COMMERCIAL_SOURCE_TEXT_PATTERN =
@@ -34,8 +40,10 @@ const LEXICAL_SOURCE_TEXT_PATTERN =
 const REFERENCE_DOMAIN_PATTERN =
   /(?:^|\.)((wikipedia\.org|britannica\.com|arxiv\.org|nature\.com|science\.org|nih\.gov|nasa\.gov))$/i;
 const PRODUCT_DOMAIN_PATTERN =
-  /(?:^|\.)((openai\.com|chatgpt\.com|gemini\.google\.com|perplexity\.ai|claude\.ai))$/i;
+  /(?:^|\.)((openai\.com|chatgpt\.com|gemini\.google\.com|cloud\.google\.com|perplexity\.ai|claude\.ai))$/i;
 const AUTHORITY_DOMAIN_SCORES: Array<[RegExp, number]> = [
+  [/(?:^|\.)fastify\.dev$/i, 3],
+  [/(?:^|\.)github\.com$/i, 1.5],
   [/(?:^|\.)wikipedia\.org$/i, 3],
   [/(?:^|\.)britannica\.com$/i, 3],
   [/(?:^|\.)dictionary\.com$/i, 2.5],
@@ -49,6 +57,11 @@ const STOP_WORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'in', 'is',
   'it', 'of', 'on', 'or', 'that', 'the', 'to', 'with',
 ]);
+const EXPLANATORY_QUERY_PATTERN = /^(what is|what are|what does|explain)\b/i;
+const TUTORIAL_TEXT_PATTERN = /\b(introduction|tutorial|guide|practical guide|get started|getting started)\b/i;
+const BROAD_ACRONYM_QUERY_PATTERN = /^(ai|a\.i\.|ml|llm|nlp)$/i;
+const HACKER_NEWS_QUERY_PATTERN = /^(hacker news|hn)$/i;
+const MARKETING_HEAVY_TEXT_PATTERN = /\b(#1|trusted source|top platform|real-time updates|actionable insights)\b/i;
 
 export interface SummarizationResult {
   summary: string | null;
@@ -91,16 +104,16 @@ export class SummarizationService {
       return { summary: null, error: null, sources: [], claims: [] };
     }
 
-    const cacheKey = this.buildSummaryCacheKey(trimmedQuery);
-    const cached = this.readSummaryCache(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
     const definitionStyleQuery = this.isLikelyDefinitionQuery(trimmedQuery);
     const candidateResults = this.selectSummaryResults(trimmedQuery, results, definitionStyleQuery);
     if (candidateResults.length === 0) {
       return { summary: null, error: null, sources: [], claims: [] };
+    }
+    const broadAcronymQuery = this.isBroadAcronymQuery(trimmedQuery);
+    const cacheKey = this.buildSummaryCacheKey(trimmedQuery, candidateResults);
+    const cached = this.readSummaryCache(cacheKey);
+    if (cached) {
+      return cached;
     }
 
     const fallbackSources = candidateResults.map((result, index) => this.toEvidenceSource(result, index));
@@ -149,7 +162,7 @@ export class SummarizationService {
             summary: claimTexts.join(' '),
             error: null,
             sources: groundedSources,
-            claims: this.mapClaimsToEvidence(claimTexts, groundedSources),
+            claims: this.mapClaimsToEvidence(claimTexts, groundedSources, broadAcronymQuery),
           };
           this.writeSummaryCache(cacheKey, response);
           return response;
@@ -178,6 +191,7 @@ export class SummarizationService {
             MAX_DEFINITION_STYLE_SUMMARY_SENTENCES,
           ),
           rankedFallbackSources,
+          broadAcronymQuery,
         ),
       };
       this.writeSummaryCache(cacheKey, response);
@@ -200,7 +214,7 @@ export class SummarizationService {
         summary: normalizedSummary,
         error: claimTexts.length === 0 ? 'Model output could not be structured into claims.' : null,
         sources: rankedFallbackSources,
-        claims: this.mapClaimsToEvidence(claimTexts, rankedFallbackSources),
+        claims: this.mapClaimsToEvidence(claimTexts, rankedFallbackSources, broadAcronymQuery),
       };
       this.writeSummaryCache(cacheKey, response);
       return response;
@@ -221,8 +235,13 @@ export class SummarizationService {
     }
   }
 
-  private buildSummaryCacheKey(query: string): string {
-    return query.trim().toLowerCase();
+  private buildSummaryCacheKey(query: string, candidateResults: SummarySource[]): string {
+    const normalizedQuery = query.trim().toLowerCase();
+    const topResultFingerprint = candidateResults
+      .slice(0, 3)
+      .map((result) => `${result.url}|${result.title}`)
+      .join('||');
+    return `${normalizedQuery}::${topResultFingerprint}`;
   }
 
   private readSummaryCache(cacheKey: string): SummarizationResult | null {
@@ -266,6 +285,9 @@ export class SummarizationService {
     const deduped: SummarySource[] = [];
     const seenUrls = new Set<string>();
     const queryTokens = this.extractMeaningfulTokens(query);
+    const explanatoryQuery = this.isLikelyExplanatoryQuery(query);
+    const broadAcronymQuery = this.isBroadAcronymQuery(query);
+    const hackerNewsQuery = this.isHackerNewsQuery(query);
 
     for (const result of results) {
       if (!result?.url || seenUrls.has(result.url)) {
@@ -290,11 +312,22 @@ export class SummarizationService {
       .map((result, index) => ({
         result,
         index,
-        score: this.scoreSource(result, queryTokens, definitionLikeQuery),
+        score: this.scoreSource(
+          result,
+          queryTokens,
+          definitionLikeQuery,
+          explanatoryQuery,
+          broadAcronymQuery,
+          hackerNewsQuery,
+        ),
       }))
       .sort((a, b) => b.score - a.score || a.index - b.index);
 
-    return scored.slice(0, MAX_SUMMARY_CONTEXT_RESULTS).map((item) => item.result);
+    let selected = scored.slice(0, MAX_SUMMARY_CONTEXT_RESULTS).map((item) => item.result);
+    if (broadAcronymQuery) {
+      selected = this.ensureReferenceResultForBroadAcronym(selected, scored.map((item) => item.result));
+    }
+    return selected;
   }
 
   private buildLocalFallbackResponse(
@@ -315,7 +348,7 @@ export class SummarizationService {
       summary,
       error: null,
       sources: rankedFallbackSources,
-      claims: this.mapClaimsToEvidence(claimTexts, rankedFallbackSources),
+      claims: this.mapClaimsToEvidence(claimTexts, rankedFallbackSources, this.isBroadAcronymQuery(query)),
     };
   }
 
@@ -365,10 +398,25 @@ export class SummarizationService {
     return thinSnippet && overlapScore < 0.15;
   }
 
-  private scoreSource(result: SummarySource, queryTokens: string[], definitionLikeQuery: boolean): number {
+  private scoreSource(
+    result: SummarySource,
+    queryTokens: string[],
+    definitionLikeQuery: boolean,
+    explanatoryQuery: boolean,
+    broadAcronymQuery: boolean,
+    hackerNewsQuery: boolean,
+  ): number {
     let score = 0;
     score += this.queryOverlapScore(result, queryTokens) * 8;
     score += this.authorityScore(result.url);
+
+    if (explanatoryQuery) {
+      score += this.docsPreferenceScore(result, queryTokens);
+      const tutorialText = `${result.title} ${result.description}`.toLowerCase();
+      if (TUTORIAL_TEXT_PATTERN.test(tutorialText)) {
+        score -= 0.75;
+      }
+    }
 
     if (definitionLikeQuery) {
       if (this.isDictionaryDomain(result.url) || this.isLexicalSource(result)) {
@@ -384,8 +432,73 @@ export class SummarizationService {
       }
     }
 
+    if (broadAcronymQuery) {
+      if (this.isReferenceResult(result)) {
+        score += 3;
+      }
+      if (this.isProductResult(result)) {
+        score -= 2.5;
+      }
+    }
+
+    if (hackerNewsQuery) {
+      if (this.isHackerNewsResult(result)) {
+        score += 5;
+      }
+      if (this.isMarketingHeavyResult(result)) {
+        score -= 2;
+      }
+    }
+
     if (result.description.trim().length < 50) {
       score -= 0.5;
+    }
+
+    return score;
+  }
+
+  private isLikelyExplanatoryQuery(query: string): boolean {
+    return EXPLANATORY_QUERY_PATTERN.test(query.trim());
+  }
+
+  private isBroadAcronymQuery(query: string): boolean {
+    return BROAD_ACRONYM_QUERY_PATTERN.test(query.trim().toLowerCase());
+  }
+
+  private isHackerNewsQuery(query: string): boolean {
+    return HACKER_NEWS_QUERY_PATTERN.test(query.trim().toLowerCase());
+  }
+
+  private docsPreferenceScore(result: SummarySource, queryTokens: string[]): number {
+    let hostname = '';
+    let pathname = '';
+    try {
+      const parsed = new URL(result.url);
+      hostname = parsed.hostname.toLowerCase();
+      pathname = parsed.pathname.toLowerCase();
+    } catch {
+      return 0;
+    }
+
+    let score = 0;
+    if (hostname.startsWith('docs.') || pathname.startsWith('/docs') || pathname.includes('/docs/')) {
+      score += 2;
+    }
+
+    if (hostname.endsWith('.dev')) {
+      score += 1.5;
+    }
+
+    if (hostname === 'github.com') {
+      score += 1;
+    }
+
+    if (queryTokens.some((token) => hostname.includes(token))) {
+      score += 1.5;
+    }
+
+    if (queryTokens.some((token) => pathname.includes(`/${token}`))) {
+      score += 1;
     }
 
     return score;
@@ -537,29 +650,69 @@ export class SummarizationService {
   }
 
   private buildFallbackSummary(query: string, results: SummarySource[]): string | null {
-    const sources = results.slice(0, 2);
+    const sources = results.slice(0, 3);
     if (sources.length === 0) {
       return null;
     }
 
-    const sentences = sources
+    const leadSourcePool = (() => {
+      if (this.isHackerNewsQuery(query)) {
+        const hackerNewsPreferred = sources
+          .filter((source) => this.isHackerNewsResult(source))
+          .filter((source) => this.isInformativeFallbackSnippet(source.description));
+        if (hackerNewsPreferred.length > 0) {
+          return hackerNewsPreferred;
+        }
+      }
+
+      if (this.isBroadAcronymQuery(query)) {
+        const nonProduct = sources.filter((source) => !this.isProductResult(source));
+        if (nonProduct.length > 0) {
+          return nonProduct;
+        }
+      }
+
+      return sources;
+    })();
+
+    const cleanedSnippets = leadSourcePool
       .map((source) => {
         const cleaned = source.description.replace(/\s+/g, ' ').trim();
-        if (!cleaned) {
-          return null;
+        if (cleaned) {
+          return cleaned;
         }
-
-        const firstSentence = cleaned.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/)?.[0]?.trim() ?? '';
-        if (!firstSentence || firstSentence.endsWith('...') || firstSentence.length < 25) {
-          return null;
-        }
-
-        return firstSentence;
+        return '';
       })
-      .filter((value): value is string => Boolean(value));
+      .filter((value): value is string => value.length > 0);
+
+    const informativeSnippets = cleanedSnippets.filter((snippet) => this.isInformativeFallbackSnippet(snippet));
+    const snippetPool = informativeSnippets.length > 0 ? informativeSnippets : cleanedSnippets;
+    const titleFallbackLead = this.buildTitleFallbackLead(sources);
+
+    if (snippetPool.length === 0) {
+      if (!titleFallbackLead) {
+        return null;
+      }
+      const supportOnly = this.buildFallbackSupportSentence(query, sources);
+      return [titleFallbackLead, supportOnly].filter(Boolean).join(' ');
+    }
+
+    const sentences = snippetPool
+      .map((cleaned) => cleaned.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/)?.[0]?.trim() ?? '')
+      .map((sentence) => sentence.replace(/\s*\.\.\.\s*$/, '').trim())
+      .filter((sentence) => sentence.length >= 12 && !this.isLikelyIncompleteSentence(sentence));
 
     if (sentences.length === 0) {
-      return null;
+      const fallback = snippetPool[0]?.replace(/\s*\.\.\.\s*$/, '').trim() ?? '';
+      if ((!fallback || this.isLikelyIncompleteSentence(fallback)) && !titleFallbackLead) {
+        return null;
+      }
+      const lead =
+        fallback && !this.isLikelyIncompleteSentence(fallback)
+          ? this.ensureSentencePunctuation(fallback)
+          : titleFallbackLead;
+      const supportOnly = this.buildFallbackSupportSentence(query, sources);
+      return [lead, supportOnly].filter(Boolean).join(' ');
     }
 
     const leadSentence = sentences[0];
@@ -567,9 +720,48 @@ export class SummarizationService {
       return null;
     }
 
-    const lead = this.rephraseFallbackLead(query, leadSentence);
-    const support = this.buildFallbackSupportSentence(sources);
+    const lead = this.ensureSentencePunctuation(this.rephraseFallbackLead(query, leadSentence));
+    const support = this.buildFallbackSupportSentence(query, sources);
     return [lead, support].filter(Boolean).join(' ');
+  }
+
+  private isInformativeFallbackSnippet(snippet: string): boolean {
+    const normalized = snippet.replace(/\s+/g, ' ').trim();
+    if (!normalized) {
+      return false;
+    }
+
+    if (normalized.length < 25) {
+      return false;
+    }
+
+    if (LOW_INFORMATION_SNIPPET_PATTERN.test(normalized)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private isLikelyIncompleteSentence(sentence: string): boolean {
+    const normalized = sentence.trim().replace(/[.!?]+$/, '');
+    if (!normalized) {
+      return true;
+    }
+
+    return INCOMPLETE_SENTENCE_END_PATTERN.test(normalized);
+  }
+
+  private buildTitleFallbackLead(results: SummarySource[]): string | null {
+    const firstTitle = results
+      .map((source) => source.title?.replace(/\s+/g, ' ').trim() ?? '')
+      .map((title) => title.split('|')[0]?.trim() ?? title)
+      .find((title) => title.length >= 3);
+
+    if (!firstTitle) {
+      return null;
+    }
+
+    return this.ensureSentencePunctuation(`${firstTitle} is covered by multiple sources`);
   }
 
   private rephraseFallbackLead(query: string, sentence: string): string {
@@ -592,12 +784,28 @@ export class SummarizationService {
     return `In general usage, ${normalizedQuery} ${remainder}.`;
   }
 
-  private buildFallbackSupportSentence(results: SummarySource[]): string | null {
+  private buildFallbackSupportSentence(query: string, results: SummarySource[]): string | null {
     if (results.length === 0) {
       return null;
     }
 
-    return 'Reference sources generally describe this concept in similar terms.';
+    if (/\bnews\b/i.test(query)) {
+      return 'Top sources cover this topic from multiple angles.';
+    }
+
+    const variants = [
+      'Reference sources generally describe this concept in similar terms.',
+      'Across reference sources, the core meaning remains consistent.',
+      'Authoritative references present a broadly consistent description.',
+    ];
+
+    const seed = query
+      .trim()
+      .toLowerCase()
+      .split('')
+      .reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    const index = seed % variants.length;
+    return variants[index] ?? variants[0] ?? null;
   }
 
   private toNaturalSummary(
@@ -662,6 +870,16 @@ export class SummarizationService {
     }
 
     const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const dictionaryMeaningPattern = new RegExp(`^the meaning of\\s+${escapedQuery}\\s+is\\s+`, 'i');
+    if (dictionaryMeaningPattern.test(normalized)) {
+      const remainder = normalized.replace(dictionaryMeaningPattern, '').trim();
+      if (!remainder) {
+        return '';
+      }
+
+      return this.ensureSentencePunctuation(`In common usage, ${query} means ${remainder}`);
+    }
+
     const appositivePattern = new RegExp(`^(${escapedQuery}),\\s*`, 'i');
     if (appositivePattern.test(normalized)) {
       const remainder = normalized.replace(appositivePattern, '').trim();
@@ -766,7 +984,7 @@ export class SummarizationService {
         continue;
       }
 
-      if (/^reference sources /i.test(normalized)) {
+      if (SUPPORT_SENTENCE_PATTERN.test(normalized)) {
         continue;
       }
 
@@ -814,6 +1032,10 @@ export class SummarizationService {
       return true;
     }
 
+    if (this.isLikelyIncompleteSentence(candidate)) {
+      return true;
+    }
+
     return /\b(not|only|such as|including)\s*$/i.test(candidate);
   }
 
@@ -840,8 +1062,6 @@ export class SummarizationService {
       return true;
     }
 
-    // Some grounded responses are terse but still useful as claims.
-    // Keep short simple claims if they are not fragment-like.
     return wordCount <= 5;
   }
 
@@ -859,7 +1079,11 @@ export class SummarizationService {
     return `${base}, ${suffix}`;
   }
 
-  private mapClaimsToEvidence(claimTexts: string[], sources: EvidenceSourceItem[]): SummaryClaim[] {
+  private mapClaimsToEvidence(
+    claimTexts: string[],
+    sources: EvidenceSourceItem[],
+    broadAcronymQuery: boolean,
+  ): SummaryClaim[] {
     if (claimTexts.length === 0) {
       return [];
     }
@@ -870,9 +1094,12 @@ export class SummarizationService {
       id: `claim-${index + 1}`,
       text,
       evidence: (() => {
-        // Claim-level citation mapping is not provided by the API.
-        // Use deterministic token overlap and source quality scoring.
-        const evidence = this.selectEvidenceForClaim(text, sources, previousClaimEvidenceKeys);
+        const evidence = this.selectEvidenceForClaim(
+          text,
+          sources,
+          previousClaimEvidenceKeys,
+          broadAcronymQuery,
+        );
         previousClaimEvidenceKeys = new Set(evidence.map((item) => this.sourceKey(item)));
         return evidence;
       })(),
@@ -883,6 +1110,7 @@ export class SummarizationService {
     claimText: string,
     sources: EvidenceSourceItem[],
     previousClaimEvidenceKeys: Set<string>,
+    broadAcronymQuery = false,
   ): EvidenceSourceItem[] {
     if (sources.length === 0) {
       return [];
@@ -901,10 +1129,12 @@ export class SummarizationService {
             claimTokens,
             this.extractMeaningfulTokens(`${source.title} ${source.snippet} ${source.domain}`),
           ) * 10 +
-          this.evidenceSourceQualityScore(source),
+          this.evidenceSourceQualityScore(source, broadAcronymQuery),
       }))
       .sort((a, b) => b.score - a.score || a.source.sourceIndex - b.source.sourceIndex);
 
+    const informativeRanked = ranked.filter((item) => !this.isLowInformationEvidenceSource(item.source));
+    const rankedPool = informativeRanked.length > 0 ? informativeRanked : ranked;
     const strongestScore = ranked[0]?.score ?? 0;
     const secondScore = ranked[1]?.score ?? 0;
     const maxEvidence =
@@ -912,10 +1142,10 @@ export class SummarizationService {
         ? 2
         : Math.min(2, sources.length);
 
-    const overlapFiltered = ranked.filter((item) => item.overlap >= MIN_CLAIM_EVIDENCE_OVERLAP);
-    const candidatePool = overlapFiltered.length > 0 ? overlapFiltered : ranked;
+    const overlapFiltered = rankedPool.filter((item) => item.overlap >= MIN_CLAIM_EVIDENCE_OVERLAP);
+    const candidatePool = overlapFiltered.length > 0 ? overlapFiltered : rankedPool;
     const fresh = candidatePool.filter((item) => !previousClaimEvidenceKeys.has(this.sourceKey(item.source)));
-    const pool = fresh.length > 0 ? fresh : ranked;
+    const pool = fresh.length > 0 ? fresh : rankedPool;
     return pool.slice(0, maxEvidence).map((item) => item.source);
   }
 
@@ -942,7 +1172,7 @@ export class SummarizationService {
     return source.url || `${source.title}|${source.sourceIndex}`;
   }
 
-  private evidenceSourceQualityScore(source: EvidenceSourceItem): number {
+  private evidenceSourceQualityScore(source: EvidenceSourceItem, broadAcronymQuery = false): number {
     let score = 0;
     if (source.url) {
       score += this.authorityScore(source.url);
@@ -962,10 +1192,22 @@ export class SummarizationService {
       score += 3;
     }
     if (this.isProductSource(source)) {
-      score -= 1.5;
+      score -= broadAcronymQuery ? 3.5 : 1.5;
+    }
+    if (this.isLowInformationEvidenceSource(source)) {
+      score -= 4;
     }
 
     return score;
+  }
+
+  private isLowInformationEvidenceSource(source: EvidenceSourceItem): boolean {
+    const text = `${source.title} ${source.snippet}`.replace(/\s+/g, ' ').trim();
+    if (!text) {
+      return true;
+    }
+
+    return LOW_INFORMATION_SNIPPET_PATTERN.test(text) || text.length < 25;
   }
 
   private selectDisplaySources(sources: EvidenceSourceItem[], query: string): EvidenceSourceItem[] {
@@ -973,6 +1215,7 @@ export class SummarizationService {
       return [];
     }
 
+    const broadAcronymQuery = this.isBroadAcronymQuery(query);
     const queryTokens = this.extractMeaningfulTokens(query);
     const deduped = new Map<string, EvidenceSourceItem>();
 
@@ -991,12 +1234,21 @@ export class SummarizationService {
             queryTokens,
             this.extractMeaningfulTokens(`${source.title} ${source.snippet} ${source.domain}`),
           ) * 10 +
-          this.evidenceSourceQualityScore(source),
+          this.evidenceSourceQualityScore(source, broadAcronymQuery),
       }))
       .sort((a, b) => b.score - a.score || a.source.sourceIndex - b.source.sourceIndex)
       .map((item) => item.source);
 
-    const selected = ranked.slice(0, MAX_SUMMARY_DISPLAY_SOURCES);
+    const hackerNewsQuery = this.isHackerNewsQuery(query);
+    let selected = ranked.slice(0, MAX_SUMMARY_DISPLAY_SOURCES);
+    if (broadAcronymQuery) {
+      selected = this.limitProductSources(selected, ranked, 1);
+      selected = this.ensureReferenceSourceInTopN(selected, ranked, 2);
+    }
+    if (hackerNewsQuery) {
+      selected = this.ensurePreferredHackerNewsSource(selected, ranked);
+    }
+
     if (selected.length === 0) {
       return selected;
     }
@@ -1022,6 +1274,114 @@ export class SummarizationService {
     return selected;
   }
 
+  private ensurePreferredHackerNewsSource(
+    selected: EvidenceSourceItem[],
+    ranked: EvidenceSourceItem[],
+  ): EvidenceSourceItem[] {
+    const output = [...selected];
+    if (output.some((source) => this.isHackerNewsSource(source))) {
+      return output;
+    }
+
+    const preferred = ranked.find((source) => this.isHackerNewsSource(source));
+    if (!preferred) {
+      return output;
+    }
+
+    output[output.length - 1] = preferred;
+    return output;
+  }
+
+  private ensureReferenceSourceInTopN(
+    selected: EvidenceSourceItem[],
+    ranked: EvidenceSourceItem[],
+    topN: number,
+  ): EvidenceSourceItem[] {
+    const output = [...selected];
+    if (output.slice(0, topN).some((source) => this.isReferenceSource(source))) {
+      return output;
+    }
+
+    const referenceCandidate = ranked.find(
+      (source) =>
+        this.isReferenceSource(source) && !output.some((current) => this.sourceKey(current) === this.sourceKey(source)),
+    );
+    if (!referenceCandidate) {
+      return output;
+    }
+
+    const replaceIndex = Math.min(Math.max(topN - 1, 0), output.length - 1);
+    output[replaceIndex] = referenceCandidate;
+    return output;
+  }
+
+  private limitProductSources(
+    selected: EvidenceSourceItem[],
+    ranked: EvidenceSourceItem[],
+    maxProductSources: number,
+  ): EvidenceSourceItem[] {
+    const output = [...selected];
+    let productCount = output.filter((source) => this.isProductSource(source)).length;
+    if (productCount <= maxProductSources) {
+      return output;
+    }
+
+    const replacementCandidates = ranked.filter(
+      (source) =>
+        !this.isProductSource(source) && !output.some((current) => this.sourceKey(current) === this.sourceKey(source)),
+    );
+
+    for (let i = output.length - 1; i >= 0 && productCount > maxProductSources; i -= 1) {
+      const current = output[i];
+      if (!current || !this.isProductSource(current)) {
+        continue;
+      }
+
+      const replacement = replacementCandidates.shift();
+      if (!replacement) {
+        break;
+      }
+      output[i] = replacement;
+      productCount -= 1;
+    }
+
+    return output;
+  }
+
+  private isReferenceResult(result: SummarySource): boolean {
+    return this.isReferenceSource(this.toEvidenceSource(result, 0));
+  }
+
+  private isProductResult(result: SummarySource): boolean {
+    return this.isProductSource(this.toEvidenceSource(result, 0));
+  }
+
+  private ensureReferenceResultForBroadAcronym(
+    selected: SummarySource[],
+    ranked: SummarySource[],
+  ): SummarySource[] {
+    if (selected.length === 0) {
+      return selected;
+    }
+
+    if (selected.some((result) => this.isReferenceResult(result))) {
+      return selected;
+    }
+
+    const referenceCandidate = ranked.find(
+      (result) =>
+        this.isReferenceResult(result) &&
+        !selected.some((current) => current.url === result.url),
+    );
+    if (!referenceCandidate) {
+      return selected;
+    }
+
+    const output = [...selected];
+    output[output.length - 1] = referenceCandidate;
+    return output;
+  }
+
   private isReferenceSource(source: EvidenceSourceItem): boolean {
     if (source.url) {
       try {
@@ -1029,9 +1389,7 @@ export class SummarizationService {
         if (REFERENCE_DOMAIN_PATTERN.test(hostname) || hostname.endsWith('.edu') || hostname.endsWith('.gov')) {
           return true;
         }
-      } catch {
-        // noop
-      }
+      } catch {}
     }
 
     const text = `${source.title} ${source.snippet}`.toLowerCase();
@@ -1045,12 +1403,32 @@ export class SummarizationService {
         if (PRODUCT_DOMAIN_PATTERN.test(hostname)) {
           return true;
         }
-      } catch {
-        // noop
-      }
+      } catch {}
     }
 
     const text = `${source.title} ${source.snippet}`.toLowerCase();
     return /\b(assistant|chatbot|official site|pricing|plans|try now|sign up)\b/.test(text);
+  }
+
+  private isHackerNewsSource(source: EvidenceSourceItem): boolean {
+    if (!source.url) {
+      return false;
+    }
+
+    try {
+      const hostname = new URL(source.url).hostname.toLowerCase();
+      return hostname === 'news.ycombinator.com';
+    } catch {
+      return false;
+    }
+  }
+
+  private isHackerNewsResult(result: SummarySource): boolean {
+    return this.isHackerNewsSource(this.toEvidenceSource(result, 0));
+  }
+
+  private isMarketingHeavyResult(result: SummarySource): boolean {
+    const text = `${result.title} ${result.description}`.toLowerCase();
+    return MARKETING_HEAVY_TEXT_PATTERN.test(text);
   }
 }

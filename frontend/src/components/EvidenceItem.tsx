@@ -6,6 +6,7 @@ interface EvidenceItemProps {
 
 export function EvidenceItem({ source }: EvidenceItemProps) {
   const title = source.title || source.domain || 'Source';
+  const snippet = source.snippet ? source.snippet.replace(/\s*\.\.\.\s*$/, '').trim() : '';
 
   return (
     <div className="evidence-item">
@@ -20,7 +21,7 @@ export function EvidenceItem({ source }: EvidenceItemProps) {
           </>
         ) : null}
       </div>
-      {source.snippet ? <p className="muted evidence-snippet">{source.snippet}</p> : null}
+      {snippet ? <p className="muted evidence-snippet">{snippet}</p> : null}
       {source.url ? (
         <a className="evidence-link" href={source.url} target="_blank" rel="noreferrer">
           Open source
