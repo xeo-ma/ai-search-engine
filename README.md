@@ -7,8 +7,8 @@ This project is a minimal web search application with an AI summary layer. Users
 - Frontend (`frontend/`): Next.js app that renders the search UI, results page, summary card, and load-more flow.
 - Backend (`backend/`): Fastify + TypeScript API exposing `/search`, `/summarize`, and `/tts`.
 - Search provider integration: backend calls Brave Web Search and normalizes returned results.
-- AI summarization layer: backend uses OpenAI Responses API to generate summaries from top retrieved sources.
-- Definition + pronunciation layer: frontend resolves definition intent via `/api/define` and plays pronunciation via `/api/tts` backed by OpenAI TTS.
+- AI summarization + evidence layer: backend uses OpenAI Responses API (`gpt-5-mini`) to return a concise summary, structured claims, and grounded evidence sources.
+- Definition + pronunciation layer: frontend resolves definition intent via `/api/define` (Dictionary API, then Datamuse fallback) and plays pronunciation via `/api/tts` backed by OpenAI TTS.
 
 ## Design Principles
 - Search-first user experience: the primary flow centers on query input and result retrieval before any secondary processing.
@@ -22,10 +22,13 @@ This project is a minimal web search application with an AI summary layer. Users
 - Web page with a search bar
 - Results page with web result cards
 - AI-generated summary with source links
+- Optional `Show evidence` toggle for claim + evidence expansion
 - Definition card for definition-style queries
 - Pronunciation playback (OpenAI TTS)
 - Safe-mode-first search behavior
 - Incremental result loading via "Load more results"
+- URL query persistence (`/?q=...`) with auto-run on page load
+- Minimal error states (search failure, no results, summary failure)
 
 ## Tech Stack
 - TypeScript
@@ -47,9 +50,10 @@ This project is a minimal web search application with an AI summary layer. Users
 2. Frontend calls its server route (`/api/search`), which forwards to backend `/search`.
 3. Backend fetches and normalizes results from Brave Search, then returns results to the frontend.
 4. Frontend sends top results to `/api/summarize`, which forwards to backend `/summarize`.
-5. Backend generates a summary with OpenAI and returns it with sources for rendering.
-6. For definition-style queries, frontend also calls `/api/define` and renders a Definition card when data is available.
-7. Pronunciation button calls `/api/tts`, which forwards to backend `/tts` for OpenAI speech synthesis.
+5. Backend generates summary text plus claim/evidence metadata with OpenAI Responses API; backend applies filtering/ranking heuristics and limits display sources to top 3.
+6. Frontend renders compact AI Summary by default. If claims exist, users can expand `Show evidence` to view claim-grouped evidence rows; when expanded, the bottom Sources list is hidden.
+7. For definition-style queries, frontend also calls `/api/define` and renders a Definition card when data is available.
+8. Pronunciation icon calls `/api/tts`, which forwards to backend `/tts` for OpenAI speech synthesis.
 
 ## Running the Project
 1. Install dependencies:
@@ -82,11 +86,18 @@ Optional:
 - `OPENAI_TTS_MODEL`: TTS model (default `gpt-4o-mini-tts`)
 - `OPENAI_TTS_VOICE`: TTS voice (default `alloy`)
 - `OPENAI_TTS_RESPONSE_FORMAT`: TTS output format (default `wav`)
+- `DICTIONARY_API_BASE_URL`: definition provider base URL override
+- `DATAMUSE_API_BASE_URL`: fallback definition provider base URL override
 - `BACKEND_BASE_URL`: frontend server-side proxy target (default `http://localhost:3001`)
 - `NEXT_PUBLIC_API_BASE_URL`: fallback frontend proxy target
 
 ## Future Improvements
 - Better provider-level error mapping for user-facing failures
 - End-to-end tests for search + summary flows
-- Request-level caching strategy for repeated queries
-- Optional ranking and result quality tuning
+- Redis-backed cache for multi-instance deployments
+- Additional ranking and source-quality tuning
+
+## Known Limitations
+- Current caches are in-memory and process-local (not shared across instances).
+- Evidence-to-claim mapping uses deterministic heuristics, not perfect sentence-level citation mapping.
+- Sources list is intentionally hidden while evidence is expanded to reduce duplicate verification UI.

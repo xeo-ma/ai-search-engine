@@ -1,133 +1,56 @@
-# Architecture (Phase 1)
+# Architecture
 
-## 1. Proposed folder/file structure
+## System shape
 
-```text
-ai-search-engine/
-  frontend/
-    src/
-      app/
-        layout.tsx
-        page.tsx                       # single search page (v1)
-      components/
-        SearchBar.tsx
-        SafeModeToggle.tsx
-        SummaryCard.tsx
-        ResultList.tsx
-        ErrorState.tsx
-      lib/
-        api-client.ts                  # calls backend /search endpoint
-      styles/
-        globals.css
+- `frontend/` (Next.js 14, React 18): UI rendering, URL query state (`?q=`), and server-side API proxy routes.
+- `backend/` (Fastify + TypeScript): search retrieval, summarization orchestration, source ranking/filtering, and TTS.
+- `shared/` contracts: request/response types shared across app boundaries where needed.
 
-  backend/
-    src/
-      main.ts                          # server bootstrap
-      app.ts                           # app wiring
-      routes/
-        search.route.ts                # thin route/controller
-      modules/
-        search/
-          dto.ts
-          search.service.ts            # orchestrates the request flow
-        providers/
-          web-search/
-            provider.interface.ts
-            brave.provider.ts          # Brave-specific code only
-          llm/
-            provider.interface.ts
-            openai.provider.ts         # OpenAI-specific code only
-        normalize/
-          normalize.service.ts         # provider output -> common shape
-          dedupe.service.ts            # remove duplicate results
-        safety/
-          policy.ts
-          safety.service.ts            # safe mode filter logic
-        content/
-          content-fetch.service.ts     # fetch top source pages
-          extract.util.ts              # extract readable text/snippets
-        summarization/
-          prompt-builder.ts
-          summarization.service.ts     # GPT summary + citations
-        cache/
-          cache.service.ts             # in-memory TTL cache
-          cache-keys.ts
-      config/
-        env.ts
-        logger.ts
-      shared/
-        errors/
-          app-error.ts
-          error-handler.ts
-        utils/
-          url.util.ts
-          text.util.ts
+## Core backend modules
 
-  shared/
-    contracts/
-      search.ts                        # shared frontend/backend DTOs
+- `backend/src/modules/search`: Brave provider integration, result normalization, safe-mode filtering, and page-based paging (`offset: 0,1,2...`).
+- `backend/src/modules/summarization`: summary generation, claim extraction, evidence mapping, source selection, and fallback behavior.
+- `backend/src/modules/tts`: OpenAI TTS integration with in-memory audio cache.
+- `backend/src/modules/cache`: lightweight in-memory cache utility used by search.
 
-  docs/
-    architecture.md
-  .env.example
-  README.md
-```
+## Request flow
 
-## 2. Responsibility of each folder
+1. User submits a query in the frontend search bar.
+2. Frontend calls `frontend/src/app/api/search/route.ts`, which proxies to backend `POST /search`.
+3. Backend queries Brave Search, normalizes results, dedupes by URL, and returns results + paging metadata.
+4. Frontend renders results, then calls `frontend/src/app/api/summarize/route.ts` with top results.
+5. Backend `POST /summarize`:
+   - ranks and filters candidate sources,
+   - calls OpenAI Responses API (`gpt-5-mini`) with web search grounding,
+   - parses grounded source metadata (`web_search_call.action.sources`, `file_search_call.results` when present),
+   - returns summary + claims + evidence sources.
+6. Frontend renders:
+   - compact AI Summary by default,
+   - optional `Show evidence` toggle when claims exist,
+   - claim-grouped evidence rows when expanded,
+   - bottom Sources list only while evidence is collapsed.
+7. For definition-style queries, frontend calls `GET /api/define`:
+   - provider chain: Dictionary API first, Datamuse fallback.
+8. Pronunciation requests call `GET /api/tts` and stream OpenAI-generated audio.
 
-- `frontend/src/app`: page layout and route entrypoints.
-- `frontend/src/components`: UI-only components, no backend logic.
-- `frontend/src/lib`: API client and frontend-side request helpers.
-- `backend/src/routes`: HTTP route definitions and thin handlers.
-- `backend/src/modules/search`: orchestrates the end-to-end search pipeline.
-- `backend/src/modules/providers`: isolated third-party integrations.
-- `backend/src/modules/normalize`: common result mapping and dedupe.
-- `backend/src/modules/safety`: safe-mode policy + filtering.
-- `backend/src/modules/content`: source fetch/extract for stronger summaries.
-- `backend/src/modules/summarization`: prompt building + GPT summary + citations.
-- `backend/src/modules/cache`: simple in-memory caching.
-- `backend/src/config`: env parsing and minimal logger setup.
-- `backend/src/shared`: shared errors and utility helpers.
-- `shared/contracts`: request/response contracts shared by web + backend.
+## Caching strategy (current)
 
-## 3. Request flow (search query -> final response)
+- Backend summarization cache: in-memory TTL cache keyed by normalized query + top result fingerprint.
+- Frontend summarize route cache: in-memory TTL cache for repeated summarize requests from the UI.
+- Backend TTS cache: in-memory cache keyed by voice/model/format/text.
 
-1. User enters a query on the single search page; `safeMode` defaults to `true`.
-2. Frontend calls backend `POST /search` with query + options.
-3. Route validates input and delegates to `search.service`.
-4. Service checks in-memory cache by a deterministic key (`query + safeMode + paging`).
-5. On cache miss, service calls Brave provider.
-6. Provider returns raw results; normalize module maps to common schema.
-7. Dedupe module removes duplicate URLs/content-near-duplicates.
-8. Safety module filters unsafe results according to policy.
-9. Content module fetches/extracts text from top safe results (bounded count/timeouts).
-10. Summarization module builds grounded prompt from extracted text + metadata.
-11. OpenAI provider returns summary text; summarization module attaches citations.
-12. Final payload is cached and returned: summary, citations, filtered results, metadata.
-13. Frontend renders summary + source links + result list.
+These caches are process-local and are intended for single-instance deployments.
 
-## 4. External integrations needed
+## Error handling model
 
-- Brave Search API: wide-web live search.
-- OpenAI API: GPT summarization.
-- HTTP + HTML extraction libs (`node-fetch`, `cheerio`): fetch/extract source content.
-- In-memory cache (built-in process memory): v1 cache layer.
+- Search failure: explicit user-facing retry message.
+- No results: results page still renders with empty-state messaging.
+- Summary failure: results remain visible; summary section shows fallback error copy and any available sources.
+- Definition lookup failure: definition card is omitted without blocking search results.
 
-## 5. Deferred to v2
+## Intentional constraints
 
-- Authentication/authorization.
-- Billing/subscriptions.
-- Analytics dashboards/admin panel.
-- Microservices and distributed orchestration.
-- Redis/distributed cache.
-- Vector database/embeddings.
-- Custom crawler/indexing pipeline.
-- Personalization/history/profiles.
-- Advanced infra (queues, workers, complex observability stack).
-
-## Notes for v1 discipline
-
-- Keep controllers thin and explicit.
-- Keep provider-specific code isolated.
-- Prefer straightforward code over abstraction-heavy patterns.
-- Make smallest safe changes per subsystem.
+- Keep search retrieval and summarization as separate backend paths.
+- Keep AI as a non-blocking enhancement over core results.
+- Keep provider-specific code isolated from route/controller layers.
+- Keep UI minimal and interview-defensible with explicit data flow.
