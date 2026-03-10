@@ -192,10 +192,12 @@ export default function SearchPage() {
       }
 
       setSummaryStatus('loading');
+      const summaryInputResults =
+        data.selectedEvidence && data.selectedEvidence.length > 0 ? data.selectedEvidence : data.results;
       void (async () => {
         const summaryData = await summarizeApi({
           query: trimmedQuery,
-          results: data.results,
+          results: summaryInputResults,
         });
 
         if (activeSearchIdRef.current !== searchId) {

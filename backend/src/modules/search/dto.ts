@@ -30,5 +30,8 @@ export interface SearchResponseDto {
   summaryError?: string | null;
   sources: Array<{ title: string; url: string }>;
   results: SearchResultDto[];
+  retrievedCount?: number | undefined;
+  selectedCount?: number | undefined;
+  selectedEvidence?: SearchResultDto[] | undefined;
   moreResultsAvailable?: boolean | undefined;
 }

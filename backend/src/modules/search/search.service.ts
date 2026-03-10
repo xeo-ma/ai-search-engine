@@ -6,6 +6,7 @@ import {
   type SearchResponseDto,
   searchRequestSchema,
 } from './dto.js';
+import { buildSummaryEvidenceSelection } from './evidence-pipeline.js';
 import { normalizeSnippet } from './snippet-normalizer.js';
 
 export interface SearchServiceOptions {
@@ -118,6 +119,7 @@ export class SearchService {
       title: result.title,
       url: result.url,
     }));
+    const evidenceSelection = buildSummaryEvidenceSelection(query, results);
 
     return {
       query: payload.query?.original ?? query,
@@ -126,6 +128,9 @@ export class SearchService {
       summaryError: null,
       sources,
       results,
+      retrievedCount: evidenceSelection.retrievedCount,
+      selectedCount: evidenceSelection.selectedCount,
+      selectedEvidence: evidenceSelection.selectedEvidence,
       moreResultsAvailable: payload.web?.more_results_available,
     };
   }

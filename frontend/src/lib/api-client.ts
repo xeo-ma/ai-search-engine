@@ -14,6 +14,9 @@ export interface SearchResponse {
   sources: SummarySourceLink[];
   claims: SummaryClaim[];
   results: SearchItem[];
+  retrievedCount?: number;
+  selectedCount?: number;
+  selectedEvidence?: SearchItem[];
   moreResultsAvailable?: boolean;
 }
 
