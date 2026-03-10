@@ -23,6 +23,7 @@ This project is a minimal web search application with an AI summary layer. Users
 - Web page with a search bar
 - Results page with web result cards
 - AI-generated summary with source links
+- Summary confidence gate to suppress low-confidence summaries
 - Optional `Show evidence` toggle for claim + evidence expansion
 - Definition card for definition-style queries
 - Pronunciation playback (OpenAI TTS)
@@ -73,6 +74,17 @@ pnpm --dir backend dev
 pnpm --dir frontend dev
 ```
 5. Open `http://localhost:3000`.
+6. Run offline summary quality evaluation:
+```bash
+pnpm eval:summaries
+```
+
+## Quality Checks
+- Offline summary/evidence eval dataset and scoring harness:
+  - fixtures: `eval/queries.json`
+  - runner: `scripts/eval-summaries.mjs`
+  - command: `pnpm eval:summaries`
+- CI runs this eval in CL checks to catch summary-quality regressions.
 
 ## Environment Variables
 Create a `.env` file at the repository root.

@@ -23,6 +23,7 @@
    - ranks and filters candidate sources,
    - calls OpenAI Responses API (`gpt-5-mini`) with web search grounding,
    - parses grounded source metadata (`web_search_call.action.sources`, `file_search_call.results` when present),
+   - applies a summary confidence gate (suppresses summary when evidence confidence is low),
    - returns summary + claims + evidence sources.
 6. Frontend renders:
    - compact AI Summary by default,
@@ -46,7 +47,15 @@ These caches are process-local and are intended for single-instance deployments.
 - Search failure: explicit user-facing retry message.
 - No results: results page still renders with empty-state messaging.
 - Summary failure: results remain visible; summary section shows fallback error copy and any available sources.
+- Low-confidence evidence: summary is suppressed and a reliability-focused fallback message is returned.
 - Definition lookup failure: definition card is omitted without blocking search results.
+
+## Quality evaluation
+
+- Offline eval dataset: `eval/queries.json`.
+- Scoring harness: `scripts/eval-summaries.mjs`.
+- Command: `pnpm eval:summaries`.
+- CI includes this eval step in CL checks to catch quality regressions.
 
 ## Intentional constraints
 
