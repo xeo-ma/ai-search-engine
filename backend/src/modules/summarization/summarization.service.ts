@@ -57,11 +57,20 @@ const STOP_WORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'in', 'is',
   'it', 'of', 'on', 'or', 'that', 'the', 'to', 'with',
 ]);
-const EXPLANATORY_QUERY_PATTERN = /^(what is|what are|what does|explain)\b/i;
+const EXPLANATORY_QUERY_PATTERN = /^(what is|what are|what does|explain)\b|\b(explained|overview|basics?)$/i;
+const COMPARISON_QUERY_PATTERN = /\b(vs|versus|compare|difference between)\b/i;
 const TUTORIAL_TEXT_PATTERN = /\b(introduction|tutorial|guide|practical guide|get started|getting started)\b/i;
+const SOCIAL_DOMAIN_PATTERN = /(?:^|\.)((x\.com|twitter\.com|instagram\.com|facebook\.com|tiktok\.com|linkedin\.com))$/i;
+const PERSONAL_BLOG_PATTERN =
+  /\b(blog|substack|medium|wordpress|blogspot|ghost|newsletter)\b/i;
+const BLOG_HOST_PATTERN =
+  /(?:^|\.)((dev\.to|medium\.com|substack\.com|hashnode\.dev|plainenglish\.io))$/i;
 const BROAD_ACRONYM_QUERY_PATTERN = /^(ai|a\.i\.|ml|llm|nlp)$/i;
 const HACKER_NEWS_QUERY_PATTERN = /^(hacker news|hn)$/i;
-const MARKETING_HEAVY_TEXT_PATTERN = /\b(#1|trusted source|top platform|real-time updates|actionable insights)\b/i;
+const MARKETING_HEAVY_TEXT_PATTERN =
+  /\b(#1|trusted source|top platform|real-time updates|actionable insights|transformative|revolutionary|game[- ]changing|cutting-edge|industry-leading|it'?s no surprise)\b/i;
+const TECHNICAL_QUERY_HINT_PATTERN =
+  /\b(architecture|system|design|api|backend|frontend|database|cache|kubernetes|docker|fastify|react|node|typescript|oauth|jwt|csrf|redis|implementation|performance)\b/i;
 const MIN_SUMMARY_CONFIDENCE_SCORE = 0.45;
 const LOW_CONFIDENCE_SUMMARY_MESSAGE = 'Not enough reliable sources yet to generate a trustworthy summary.';
 
@@ -150,8 +159,12 @@ export class SummarizationService {
             trimmedQuery,
             definitionStyleQuery,
           );
-          const summaryText = normalizedSummary ?? fallbackSummary;
-          const claimTexts = this.extractClaims(summaryText, maxSentences);
+          const summaryText =
+            normalizedSummary && this.shouldUseFallbackSummary(normalizedSummary, trimmedQuery)
+              ? fallbackSummary ?? normalizedSummary
+              : normalizedSummary ?? fallbackSummary;
+          const rawClaimTexts = this.extractClaims(summaryText, maxSentences);
+          const claimTexts = this.filterRedundantClaims(summaryText, rawClaimTexts);
           if (claimTexts.length === 0) {
             const response = {
               summary: summaryText,
@@ -194,9 +207,12 @@ export class SummarizationService {
         error: null,
         sources: rankedFallbackSources,
         claims: this.mapClaimsToEvidence(
-          this.extractClaims(
+          this.filterRedundantClaims(
             this.buildFallbackSummary(trimmedQuery, candidateResults),
-            MAX_DEFINITION_STYLE_SUMMARY_SENTENCES,
+            this.extractClaims(
+              this.buildFallbackSummary(trimmedQuery, candidateResults),
+              MAX_DEFINITION_STYLE_SUMMARY_SENTENCES,
+            ),
           ),
           rankedFallbackSources,
           broadAcronymQuery,
@@ -217,11 +233,22 @@ export class SummarizationService {
       });
 
       const normalizedSummary = this.toNaturalSummary(summary, maxSentences, trimmedQuery, definitionStyleQuery);
-      const claimTexts = this.extractClaims(normalizedSummary, maxSentences);
+      const fallbackSummary = this.toNaturalSummary(
+        this.buildFallbackSummary(trimmedQuery, candidateResults),
+        maxSentences,
+        trimmedQuery,
+        definitionStyleQuery,
+      );
+      const summaryText =
+        normalizedSummary && this.shouldUseFallbackSummary(normalizedSummary, trimmedQuery)
+          ? fallbackSummary ?? normalizedSummary
+          : normalizedSummary;
+      const rawClaimTexts = this.extractClaims(summaryText, maxSentences);
+      const claimTexts = this.filterRedundantClaims(summaryText, rawClaimTexts);
 
       const response = {
-        summary: normalizedSummary,
-        error: claimTexts.length === 0 ? 'Model output could not be structured into claims.' : null,
+        summary: summaryText,
+        error: rawClaimTexts.length === 0 ? 'Model output could not be structured into claims.' : null,
         sources: rankedFallbackSources,
         claims: this.mapClaimsToEvidence(claimTexts, rankedFallbackSources, broadAcronymQuery),
       };
@@ -384,8 +411,10 @@ export class SummarizationService {
     const seenUrls = new Set<string>();
     const queryTokens = this.extractMeaningfulTokens(query);
     const explanatoryQuery = this.isLikelyExplanatoryQuery(query);
+    const comparisonQuery = this.isComparisonQuery(query);
     const broadAcronymQuery = this.isBroadAcronymQuery(query);
     const hackerNewsQuery = this.isHackerNewsQuery(query);
+    const comparisonSides = this.extractComparisonSides(query);
 
     for (const result of results) {
       if (!result?.url || seenUrls.has(result.url)) {
@@ -404,7 +433,7 @@ export class SummarizationService {
       return results.slice(0, MAX_SUMMARY_CONTEXT_RESULTS);
     }
 
-    const filteredForIntent = this.filterByQueryIntent(deduped, definitionLikeQuery);
+    const filteredForIntent = this.filterByQueryIntent(deduped, definitionLikeQuery, explanatoryQuery, comparisonQuery);
 
     const scored = filteredForIntent
       .map((result, index) => ({
@@ -415,6 +444,8 @@ export class SummarizationService {
           queryTokens,
           definitionLikeQuery,
           explanatoryQuery,
+          comparisonQuery,
+          comparisonSides,
           broadAcronymQuery,
           hackerNewsQuery,
         ),
@@ -441,7 +472,7 @@ export class SummarizationService {
       query,
       definitionStyleQuery,
     );
-    const claimTexts = this.extractClaims(summary, maxSentences);
+    const claimTexts = this.filterRedundantClaims(summary, this.extractClaims(summary, maxSentences));
     return {
       summary,
       error: null,
@@ -450,7 +481,36 @@ export class SummarizationService {
     };
   }
 
-  private filterByQueryIntent(results: SummarySource[], definitionLikeQuery: boolean): SummarySource[] {
+  private filterByQueryIntent(
+    results: SummarySource[],
+    definitionLikeQuery: boolean,
+    explanatoryQuery: boolean,
+    comparisonQuery: boolean,
+  ): SummarySource[] {
+    if (comparisonQuery) {
+      const comparisonPreferred = results.filter(
+        (result) =>
+          !this.isLikelySocialOrPersonalSource(result) &&
+          !this.isLikelyBlogHost(result.url) &&
+          !this.isLikelyCommercialSource(result),
+      );
+      if (comparisonPreferred.length >= 2) {
+        return comparisonPreferred;
+      }
+    }
+
+    if (explanatoryQuery) {
+      const explanatoryPreferred = results.filter(
+        (result) =>
+          !this.isLikelySocialOrPersonalSource(result) &&
+          !this.isEntertainmentDomain(result.url) &&
+          !this.isLikelyCommercialSource(result),
+      );
+      if (explanatoryPreferred.length >= 2) {
+        return explanatoryPreferred;
+      }
+    }
+
     if (!definitionLikeQuery) {
       return results;
     }
@@ -501,6 +561,8 @@ export class SummarizationService {
     queryTokens: string[],
     definitionLikeQuery: boolean,
     explanatoryQuery: boolean,
+    comparisonQuery: boolean,
+    comparisonSides: string[],
     broadAcronymQuery: boolean,
     hackerNewsQuery: boolean,
   ): number {
@@ -508,8 +570,27 @@ export class SummarizationService {
     score += this.queryOverlapScore(result, queryTokens) * 8;
     score += this.authorityScore(result.url);
 
+    if (comparisonQuery) {
+      score += this.comparisonCoverageScore(result, comparisonSides);
+      if (this.isReferenceResult(result)) {
+        score += 2;
+      }
+      if (this.isLikelyBlogHost(result.url)) {
+        score -= 2.5;
+      }
+      if (this.isLikelyCommercialSource(result)) {
+        score -= 1.5;
+      }
+    }
+
     if (explanatoryQuery) {
       score += this.docsPreferenceScore(result, queryTokens);
+      if (this.isReferenceResult(result)) {
+        score += 2.5;
+      }
+      if (this.isLikelySocialOrPersonalSource(result)) {
+        score -= 3.5;
+      }
       const tutorialText = `${result.title} ${result.description}`.toLowerCase();
       if (TUTORIAL_TEXT_PATTERN.test(tutorialText)) {
         score -= 0.75;
@@ -559,8 +640,72 @@ export class SummarizationService {
     return EXPLANATORY_QUERY_PATTERN.test(query.trim());
   }
 
+  private isComparisonQuery(query: string): boolean {
+    return COMPARISON_QUERY_PATTERN.test(query.trim());
+  }
+
+  private extractComparisonSides(query: string): string[] {
+    const normalized = query.trim().replace(/\s+/g, ' ');
+    if (!normalized) {
+      return [];
+    }
+
+    const vsMatch = normalized.match(/^(.+?)\s+(?:vs|versus)\s+(.+)$/i);
+    if (vsMatch?.[1] && vsMatch[2]) {
+      return [vsMatch[1].trim(), vsMatch[2].trim()];
+    }
+
+    const compareMatch = normalized.match(/^(?:compare|difference between)\s+(.+?)\s+(?:and|vs|versus)\s+(.+)$/i);
+    if (compareMatch?.[1] && compareMatch[2]) {
+      return [compareMatch[1].trim(), compareMatch[2].trim()];
+    }
+
+    return [];
+  }
+
+  private isLikelySocialOrPersonalSource(result: SummarySource): boolean {
+    const text = `${result.title} ${result.description} ${result.url}`.toLowerCase();
+    if (PERSONAL_BLOG_PATTERN.test(text)) {
+      return true;
+    }
+
+    try {
+      const parsed = new URL(result.url);
+      const hostname = parsed.hostname.toLowerCase();
+      const pathname = parsed.pathname.toLowerCase();
+      if (SOCIAL_DOMAIN_PATTERN.test(hostname)) {
+        return true;
+      }
+
+      const datedBlogPath = /^\/\d{4}\/\d{2}\/\d{2}\//.test(pathname);
+      const highlyTrustedHost =
+        REFERENCE_DOMAIN_PATTERN.test(hostname) ||
+        PRODUCT_DOMAIN_PATTERN.test(hostname) ||
+        hostname.endsWith('.edu') ||
+        hostname.endsWith('.gov') ||
+        hostname === 'github.com' ||
+        hostname.endsWith('.dev');
+
+      if (datedBlogPath && !highlyTrustedHost) {
+        return true;
+      }
+
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
   private isBroadAcronymQuery(query: string): boolean {
     return BROAD_ACRONYM_QUERY_PATTERN.test(query.trim().toLowerCase());
+  }
+
+  private isLikelyBlogHost(urlValue: string): boolean {
+    try {
+      return BLOG_HOST_PATTERN.test(new URL(urlValue).hostname.toLowerCase());
+    } catch {
+      return false;
+    }
   }
 
   private isHackerNewsQuery(query: string): boolean {
@@ -753,6 +898,13 @@ export class SummarizationService {
       return null;
     }
 
+    if (this.isComparisonQuery(query)) {
+      const comparisonSummary = this.buildComparisonFallbackSummary(query, sources);
+      if (comparisonSummary) {
+        return comparisonSummary;
+      }
+    }
+
     const leadSourcePool = (() => {
       if (this.isHackerNewsQuery(query)) {
         const hackerNewsPreferred = sources
@@ -891,6 +1043,10 @@ export class SummarizationService {
       return 'Top sources cover this topic from multiple angles.';
     }
 
+    if (this.isComparisonQuery(query)) {
+      return 'Sources distinguish their roles, tradeoffs, and typical use cases.';
+    }
+
     const variants = [
       'Reference sources generally describe this concept in similar terms.',
       'Across reference sources, the core meaning remains consistent.',
@@ -904,6 +1060,118 @@ export class SummarizationService {
       .reduce((sum, char) => sum + char.charCodeAt(0), 0);
     const index = seed % variants.length;
     return variants[index] ?? variants[0] ?? null;
+  }
+
+  private buildComparisonFallbackSummary(query: string, results: SummarySource[]): string | null {
+    const sides = this.extractComparisonSides(query);
+    if (sides.length !== 2) {
+      return null;
+    }
+
+    const [left, right] = sides;
+    if (!left || !right) {
+      return null;
+    }
+
+    const leftDescriptor = this.extractComparisonDescriptor(left, results);
+    const rightDescriptor = this.extractComparisonDescriptor(right, results);
+
+    if (leftDescriptor && rightDescriptor) {
+      return [
+        `${left} ${leftDescriptor}, while ${right} ${rightDescriptor}.`,
+        this.buildFallbackSupportSentence(query, results),
+      ]
+        .filter(Boolean)
+        .join(' ');
+    }
+
+    const combinedSource = results.find((result) => this.comparisonCoverageScore(result, sides) >= 4);
+    const combinedSentence = combinedSource
+      ? combinedSource.description.match(SENTENCE_SPLIT_PATTERN)?.[0]?.replace(/\s*\.\.\.\s*$/, '').trim() ?? ''
+      : '';
+
+    if (combinedSentence && !this.isLikelyIncompleteSentence(combinedSentence)) {
+      return [this.ensureSentencePunctuation(combinedSentence), this.buildFallbackSupportSentence(query, results)]
+        .filter(Boolean)
+        .join(' ');
+    }
+
+    return `${left} and ${right} are related but serve different roles. ${this.buildFallbackSupportSentence(query, results)}`;
+  }
+
+  private extractComparisonDescriptor(entity: string, results: SummarySource[]): string | null {
+    const escapedEntity = entity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const normalizedEntity = entity.trim().toLowerCase();
+
+    for (const result of results) {
+      const sentences = result.description.match(SENTENCE_SPLIT_PATTERN) ?? [result.description];
+      for (const sentence of sentences) {
+        const normalized = sentence.replace(/\s+/g, ' ').trim().replace(/\s*\.\.\.\s*$/, '');
+        if (!normalized || !new RegExp(`\\b${escapedEntity}\\b`, 'i').test(normalized)) {
+          continue;
+        }
+
+        const colonMatch = normalized.match(new RegExp(`^${escapedEntity}\\s*:\\s*(.+)$`, 'i'));
+        if (colonMatch?.[1]) {
+          const descriptor = colonMatch[1].trim().replace(/[.!?]+$/, '');
+          if (descriptor) {
+            return descriptor.charAt(0).toLowerCase() + descriptor.slice(1);
+          }
+        }
+
+        const verbMatch = normalized.match(
+          new RegExp(`^${escapedEntity}\\s+(is|are|refers to|means|involves|uses?)\\s+(.+)$`, 'i'),
+        );
+        if (verbMatch?.[1] && verbMatch[2]) {
+          const descriptor = `${verbMatch[1].toLowerCase()} ${verbMatch[2].trim().replace(/[.!?]+$/, '')}`;
+          return descriptor;
+        }
+
+        const lower = normalized.toLowerCase();
+        const index = lower.indexOf(normalizedEntity);
+        if (index === 0) {
+          const remainder = normalized.slice(entity.length).trim().replace(/^[,:-]\s*/, '').replace(/[.!?]+$/, '');
+          if (remainder) {
+            return remainder.charAt(0).toLowerCase() + remainder.slice(1);
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private comparisonCoverageScore(result: SummarySource, sides: string[]): number {
+    if (sides.length !== 2) {
+      return 0;
+    }
+
+    const text = `${result.title} ${result.description}`.toLowerCase();
+    const [left = '', right = ''] = sides.map((side) => side.toLowerCase());
+    const mentionsLeft = text.includes(left);
+    const mentionsRight = text.includes(right);
+
+    if (mentionsLeft && mentionsRight) {
+      return 4;
+    }
+
+    if (mentionsLeft || mentionsRight) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  private comparisonEvidenceCoverageScore(source: EvidenceSourceItem, sides: string[]): number {
+    return this.comparisonCoverageScore(
+      {
+        id: source.id ?? '',
+        title: source.title,
+        url: source.url,
+        description: source.snippet,
+      },
+      sides,
+    );
   }
 
   private toNaturalSummary(
@@ -1121,6 +1389,48 @@ export class SummarizationService {
       .filter((sentence) => sentence.length > 0);
   }
 
+  private filterRedundantClaims(summary: string | null, claims: string[]): string[] {
+    if (!summary || claims.length !== 1) {
+      return claims;
+    }
+
+    const supportSentences = summary
+      .match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g)
+      ?.map((sentence) => sentence.trim())
+      .filter((sentence) => sentence.length > 0 && SUPPORT_SENTENCE_PATTERN.test(sentence)) ?? [];
+    if (supportSentences.length === 0) {
+      return claims;
+    }
+
+    const [onlyClaim] = claims;
+    if (!onlyClaim) {
+      return claims;
+    }
+
+    const substantiveSummaryClaims = this.extractClaims(summary, 3);
+    if (substantiveSummaryClaims.length !== 1) {
+      return claims;
+    }
+
+    const [onlySummaryClaim] = substantiveSummaryClaims;
+    if (!onlySummaryClaim) {
+      return claims;
+    }
+
+    const normalizedClaim = onlyClaim.trim().toLowerCase();
+    const normalizedSummaryClaim = onlySummaryClaim.trim().toLowerCase();
+    if (normalizedClaim === normalizedSummaryClaim) {
+      return [];
+    }
+
+    const similarity = this.sentenceSimilarity(normalizedClaim, normalizedSummaryClaim);
+    if (similarity >= 0.92 && this.sharedTokenCount(normalizedClaim, normalizedSummaryClaim) >= 6) {
+      return [];
+    }
+
+    return claims;
+  }
+
   private normalizeClaimCandidate(candidate: string): string {
     return candidate.replace(/\s+/g, ' ').trim();
   }
@@ -1283,6 +1593,9 @@ export class SummarizationService {
     if (COMMERCIAL_SOURCE_TEXT_PATTERN.test(text)) {
       score -= 2;
     }
+    if (this.isMarketingHeavyText(text)) {
+      score -= 2.5;
+    }
     if (LEXICAL_SOURCE_TEXT_PATTERN.test(text)) {
       score += 1;
     }
@@ -1314,6 +1627,10 @@ export class SummarizationService {
     }
 
     const broadAcronymQuery = this.isBroadAcronymQuery(query);
+    const technicalQuery = this.isLikelyTechnicalQuery(query);
+    const explanatoryQuery = this.isLikelyExplanatoryQuery(query);
+    const comparisonQuery = this.isComparisonQuery(query);
+    const comparisonSides = this.extractComparisonSides(query);
     const queryTokens = this.extractMeaningfulTokens(query);
     const deduped = new Map<string, EvidenceSourceItem>();
 
@@ -1332,7 +1649,12 @@ export class SummarizationService {
             queryTokens,
             this.extractMeaningfulTokens(`${source.title} ${source.snippet} ${source.domain}`),
           ) * 10 +
-          this.evidenceSourceQualityScore(source, broadAcronymQuery),
+          this.evidenceSourceQualityScore(source, broadAcronymQuery) +
+          (explanatoryQuery && this.isReferenceSource(source) ? 2.5 : 0) +
+          (explanatoryQuery && this.isLikelySocialOrPersonalEvidenceSource(source) ? -3.5 : 0) +
+          (comparisonQuery ? this.comparisonEvidenceCoverageScore(source, comparisonSides) : 0) +
+          (comparisonQuery && this.isReferenceSource(source) ? 2 : 0) +
+          (comparisonQuery && this.isLikelyBlogHost(source.url) ? -2.5 : 0),
       }))
       .sort((a, b) => b.score - a.score || a.source.sourceIndex - b.source.sourceIndex)
       .map((item) => item.source);
@@ -1341,6 +1663,17 @@ export class SummarizationService {
     let selected = ranked.slice(0, MAX_SUMMARY_DISPLAY_SOURCES);
     if (broadAcronymQuery) {
       selected = this.limitProductSources(selected, ranked, 1);
+      selected = this.ensureReferenceSourceInTopN(selected, ranked, 2);
+    }
+    if (technicalQuery) {
+      selected = this.limitMarketingSources(selected, ranked, 0);
+    }
+    if (explanatoryQuery) {
+      selected = this.limitSocialOrPersonalSources(selected, ranked, 0);
+      selected = this.ensureReferenceSourceInTopN(selected, ranked, 2);
+    }
+    if (comparisonQuery) {
+      selected = this.limitSocialOrPersonalSources(selected, ranked, 0);
       selected = this.ensureReferenceSourceInTopN(selected, ranked, 2);
     }
     if (hackerNewsQuery) {
@@ -1446,6 +1779,74 @@ export class SummarizationService {
     return output;
   }
 
+  private limitMarketingSources(
+    selected: EvidenceSourceItem[],
+    ranked: EvidenceSourceItem[],
+    maxMarketingSources: number,
+  ): EvidenceSourceItem[] {
+    const output = [...selected];
+    let marketingCount = output.filter((source) => this.isMarketingHeavySource(source)).length;
+    if (marketingCount <= maxMarketingSources) {
+      return output;
+    }
+
+    const replacementCandidates = ranked.filter(
+      (source) =>
+        !this.isMarketingHeavySource(source) &&
+        !output.some((current) => this.sourceKey(current) === this.sourceKey(source)),
+    );
+
+    for (let i = output.length - 1; i >= 0 && marketingCount > maxMarketingSources; i -= 1) {
+      const current = output[i];
+      if (!current || !this.isMarketingHeavySource(current)) {
+        continue;
+      }
+
+      const replacement = replacementCandidates.shift();
+      if (!replacement) {
+        break;
+      }
+      output[i] = replacement;
+      marketingCount -= 1;
+    }
+
+    return output;
+  }
+
+  private limitSocialOrPersonalSources(
+    selected: EvidenceSourceItem[],
+    ranked: EvidenceSourceItem[],
+    maxSocialOrPersonalSources: number,
+  ): EvidenceSourceItem[] {
+    const output = [...selected];
+    let count = output.filter((source) => this.isLikelySocialOrPersonalEvidenceSource(source)).length;
+    if (count <= maxSocialOrPersonalSources) {
+      return output;
+    }
+
+    const replacementCandidates = ranked.filter(
+      (source) =>
+        !this.isLikelySocialOrPersonalEvidenceSource(source) &&
+        !output.some((current) => this.sourceKey(current) === this.sourceKey(source)),
+    );
+
+    for (let i = output.length - 1; i >= 0 && count > maxSocialOrPersonalSources; i -= 1) {
+      const current = output[i];
+      if (!current || !this.isLikelySocialOrPersonalEvidenceSource(current)) {
+        continue;
+      }
+
+      const replacement = replacementCandidates.shift();
+      if (!replacement) {
+        break;
+      }
+      output[i] = replacement;
+      count -= 1;
+    }
+
+    return output;
+  }
+
   private isReferenceResult(result: SummarySource): boolean {
     return this.isReferenceSource(this.toEvidenceSource(result, 0));
   }
@@ -1494,6 +1895,15 @@ export class SummarizationService {
     return /\b(encyclopedia|research|study|paper|journal|scientific)\b/.test(text);
   }
 
+  private isLikelySocialOrPersonalEvidenceSource(source: EvidenceSourceItem): boolean {
+    return this.isLikelySocialOrPersonalSource({
+      id: source.id ?? '',
+      title: source.title,
+      url: source.url,
+      description: source.snippet,
+    });
+  }
+
   private isProductSource(source: EvidenceSourceItem): boolean {
     if (source.url) {
       try {
@@ -1527,6 +1937,39 @@ export class SummarizationService {
 
   private isMarketingHeavyResult(result: SummarySource): boolean {
     const text = `${result.title} ${result.description}`.toLowerCase();
-    return MARKETING_HEAVY_TEXT_PATTERN.test(text);
+    return this.isMarketingHeavyText(text);
+  }
+
+  private isMarketingHeavySource(source: EvidenceSourceItem): boolean {
+    return this.isMarketingHeavyText(`${source.title} ${source.snippet}`.toLowerCase());
+  }
+
+  private isLikelyTechnicalQuery(query: string): boolean {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) {
+      return false;
+    }
+
+    if (this.isLikelyDefinitionQuery(normalized)) {
+      return false;
+    }
+
+    return TECHNICAL_QUERY_HINT_PATTERN.test(normalized);
+  }
+
+  private shouldUseFallbackSummary(summary: string | null, query: string): boolean {
+    if (!summary) {
+      return false;
+    }
+
+    if (!this.isLikelyTechnicalQuery(query)) {
+      return false;
+    }
+
+    return this.isMarketingHeavyText(summary);
+  }
+
+  private isMarketingHeavyText(text: string): boolean {
+    return MARKETING_HEAVY_TEXT_PATTERN.test(text.toLowerCase());
   }
 }

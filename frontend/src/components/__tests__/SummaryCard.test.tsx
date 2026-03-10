@@ -31,7 +31,7 @@ describe('SummaryCard', () => {
   });
 
   it('renders evidence toggle when structured claims are available', () => {
-    render(
+    const { container } = render(
       <SummaryCard
         summary="Cookies reduce token exposure in scripts."
         sources={[]}
@@ -55,7 +55,39 @@ describe('SummaryCard', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: 'Show evidence' })).toBeInTheDocument();
+    const summaryCard = container.querySelector('section');
+    expect(summaryCard).not.toBeNull();
+    const scoped = within(summaryCard as HTMLElement);
+
+    expect(scoped.getByRole('button', { name: 'Show evidence' })).toBeInTheDocument();
+  });
+
+  it('renders evidence toggle when sources exist without structured claims', () => {
+    const { container } = render(
+      <SummaryCard
+        summary="Physics is the science that deals with matter and energy. Reference sources generally describe this concept in similar terms."
+        sources={[
+          {
+            title: 'Physics | Britannica',
+            url: 'https://www.britannica.com/science/physics-science',
+            domain: 'www.britannica.com',
+            snippet: 'Physics is the science that deals with the structure of matter.',
+          },
+        ]}
+      />,
+    );
+
+    const summaryCard = container.querySelector('section');
+    expect(summaryCard).not.toBeNull();
+    const scoped = within(summaryCard as HTMLElement);
+
+    fireEvent.click(scoped.getByRole('button', { name: 'Show evidence' }));
+    expect(scoped.getByText('Key sources behind this summary')).toBeInTheDocument();
+    expect(scoped.getByRole('link', { name: 'Physics | Britannica' })).toHaveAttribute(
+      'href',
+      'https://www.britannica.com/science/physics-science',
+    );
+    expect(scoped.queryByText('Sources')).not.toBeInTheDocument();
   });
 
   it('hides bottom sources while evidence is expanded', () => {
@@ -93,7 +125,7 @@ describe('SummaryCard', () => {
     expect(scoped.getByText('Sources')).toBeInTheDocument();
     fireEvent.click(scoped.getByRole('button', { name: 'Show evidence' }));
     expect(scoped.queryByText('Sources')).not.toBeInTheDocument();
-    expect(scoped.getByText('Claim')).toBeInTheDocument();
+    expect(scoped.getByText('Fact 1')).toBeInTheDocument();
     expect(scoped.getByRole('button', { name: 'Hide evidence' })).toBeInTheDocument();
   });
 });

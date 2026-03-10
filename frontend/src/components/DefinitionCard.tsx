@@ -99,43 +99,11 @@ export function DefinitionCard({ definition }: DefinitionCardProps) {
     await playWithAudioElement(objectUrl);
   }
 
-  async function playWithSpeechSynthesis(text: string): Promise<void> {
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      throw new Error('Speech synthesis unavailable');
-    }
-
-    window.speechSynthesis.cancel();
-    await new Promise<void>((resolve, reject) => {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95;
-      utterance.pitch = 1;
-      utterance.onend = () => resolve();
-      utterance.onerror = () => reject(new Error('Speech synthesis failed'));
-      window.speechSynthesis.speak(utterance);
-    });
-  }
-
   async function playText(text: string): Promise<void> {
     setPlaybackError(null);
     setIsPlaying(true);
     try {
-      if (definition.audioUrl) {
-        try {
-          await playWithAudioElement(definition.audioUrl);
-          return;
-        } catch {
-          // Fall through to hosted TTS.
-        }
-      }
-
-      try {
-        await playFromApiTts(text);
-        return;
-      } catch {
-        // Fall through to browser speech synthesis.
-      }
-
-      await playWithSpeechSynthesis(text);
+      await playFromApiTts(text);
     } catch {
       setPlaybackError('Pronunciation unavailable right now.');
     } finally {
@@ -181,7 +149,12 @@ export function DefinitionCard({ definition }: DefinitionCardProps) {
 
       <p>{definition.definition}</p>
 
-      {definition.example ? <p className="muted">Example: {definition.example}</p> : null}
+      {definition.example ? (
+        <div className="example-callout">
+          <p className="example-label">Example</p>
+          <p className="example-text">{definition.example}</p>
+        </div>
+      ) : null}
       {playbackError ? <p className="muted">{playbackError}</p> : null}
     </section>
   );

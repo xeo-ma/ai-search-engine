@@ -7,6 +7,7 @@ import { ErrorState } from '../components/ErrorState';
 import { ResultList } from '../components/ResultList';
 import { SearchBar } from '../components/SearchBar';
 import { SummaryCard } from '../components/SummaryCard';
+import { SummarySourceList } from '../components/SummarySourceList';
 import type { SearchItem } from '../lib/api-client';
 import {
   defineApi,
@@ -29,6 +30,17 @@ const PAGE_SIZE = 10;
 const LETTERS_ONLY_PATTERN = /^[a-zA-Z]+$/;
 const MIN_DEFINITION_WORD_LENGTH = 2;
 const ACRONYM_PRIORITY_QUERIES = new Set(['ai']);
+const MAX_REFINE_CHIPS = 4;
+const BROAD_ACRONYM_QUERIES = new Set(['ai', 'ml', 'llm', 'nlp']);
+const SHORT_TECH_TOKENS = new Set([
+  'ai', 'ml', 'llm', 'nlp', 'api', 'sdk', 'sql', 'jwt', 'css', 'html', 'http', 'https', 'aws', 'gcp', 'cpu', 'gpu',
+]);
+const HOMEPAGE_SUGGESTED_QUERIES = [
+  'Physics explained',
+  'What is CRISPR',
+  'OAuth vs JWT',
+  'How does nuclear fusion work',
+];
 
 function appendUniqueResults(existing: SearchItem[], incoming: SearchItem[]): SearchItem[] {
   if (incoming.length === 0) {
@@ -104,6 +116,105 @@ function extractDefinitionWord(query: string): string | null {
   return null;
 }
 
+function buildRefineQueryChips(query: string): string[] {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  const normalizedQuery = trimmed.toLowerCase();
+  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  const firstToken = queryTokens[0] ?? '';
+
+  const isLowSignalSingleToken =
+    queryTokens.length === 1 &&
+    LETTERS_ONLY_PATTERN.test(firstToken) &&
+    firstToken.length <= 3 &&
+    !SHORT_TECH_TOKENS.has(firstToken);
+  const isRepeatedCharacterNoise = queryTokens.length === 1 && /^([a-z])\1{2,}$/i.test(firstToken);
+
+  if (isLowSignalSingleToken || isRepeatedCharacterNoise) {
+    return [];
+  }
+
+  const lower = trimmed.toLowerCase();
+  const appendSuffix = (suffix: string): void => {
+    const normalizedSuffix = suffix.trim().toLowerCase();
+    if (!normalizedSuffix) {
+      return;
+    }
+
+    if (lower.endsWith(normalizedSuffix)) {
+      return;
+    }
+
+    suggestions.push(`${trimmed} ${suffix}`);
+  };
+  const suggestions: string[] = [];
+
+  const isHowToQuery = /^(how to|how do i|how can i)\b/i.test(trimmed);
+  const isComparisonQuery = /\b(vs|versus|compare|difference between)\b/i.test(trimmed);
+  const isDefinitionQueryText =
+    /^define\s+/i.test(trimmed) || /\b(definition of|meaning of|what is)\b/i.test(trimmed) || queryTokens.length === 1;
+  const isBroadAcronymQuery = queryTokens.length === 1 && BROAD_ACRONYM_QUERIES.has(firstToken);
+
+  if (isBroadAcronymQuery) {
+    appendSuffix('use cases');
+    appendSuffix('risks and limitations');
+    suggestions.push(`${trimmed} vs machine learning`);
+    appendSuffix('in software engineering');
+  } else if (isHowToQuery) {
+    appendSuffix('step by step');
+    appendSuffix('examples');
+    appendSuffix('common mistakes');
+    appendSuffix('best practices');
+  } else if (isComparisonQuery) {
+    appendSuffix('pros and cons');
+    appendSuffix('when to use each');
+    appendSuffix('performance tradeoffs');
+    appendSuffix('for production systems');
+  } else if (isDefinitionQueryText) {
+    appendSuffix('explained');
+    appendSuffix('real world examples');
+    appendSuffix('use cases');
+    appendSuffix('vs related terms');
+  } else {
+    appendSuffix('best practices');
+    appendSuffix('examples');
+    appendSuffix('architecture');
+    appendSuffix('production checklist');
+  }
+
+  const seen = new Set<string>();
+  const unique = suggestions
+    .map((item) => item.trim().replace(/\s+/g, ' '))
+    .map((item) => {
+      const tokens = item.split(' ').filter(Boolean);
+      const compacted: string[] = [];
+      for (const token of tokens) {
+        const previous = compacted[compacted.length - 1];
+        if (previous && previous.toLowerCase() === token.toLowerCase()) {
+          continue;
+        }
+        compacted.push(token);
+      }
+      return compacted.join(' ');
+    })
+    .filter((item) => {
+      if (!item || item.toLowerCase() === lower || item.toLowerCase().startsWith('what is what is ')) {
+        return false;
+      }
+      const key = item.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+
+  return unique.slice(0, MAX_REFINE_CHIPS);
+}
+
 export default function SearchPage() {
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
@@ -121,6 +232,7 @@ export default function SearchPage() {
   const activeSearchIdRef = useRef(0);
   const hasInitializedFromUrlRef = useRef(false);
   const hasLoadedResults = isResultsView && !resultsLoading && !error;
+  const refineChips = buildRefineQueryChips(submittedQuery);
 
   async function onSearch(
     nextQuery?: string,
@@ -286,11 +398,42 @@ export default function SearchPage() {
     <main className={isResultsView ? 'stack results-layout' : 'stack landing-layout'}>
       {!isResultsView ? (
         <section className="landing-search">
-          <SearchBar value={query} onChange={setQuery} onSubmit={onSearch} loading={resultsLoading} />
+          <div className="landing-hero stack">
+            <p className="landing-eyebrow">Verifiable search engine</p>
+            <div className="stack landing-copy">
+              <h1>Search with evidence</h1>
+              <p className="landing-subheading">Verifiable answers grounded in source links.</p>
+            </div>
+            <SearchBar
+              value={query}
+              onChange={setQuery}
+              onSubmit={onSearch}
+              loading={resultsLoading}
+              placeholder="Ask anything..."
+            />
+            <div className="landing-suggestion-block stack">
+              <p className="landing-suggestion-label">Try a grounded query</p>
+              <div className="landing-suggestion-chips" aria-label="Suggested example searches">
+                {HOMEPAGE_SUGGESTED_QUERIES.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    className="landing-suggestion-chip"
+                    disabled={resultsLoading}
+                    onClick={() => {
+                      void onSearch(suggestion);
+                    }}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </section>
       ) : (
         <>
-          <section className="card stack">
+          <section className="card stack search-header-card">
             <SearchBar
               value={query}
               onChange={setQuery}
@@ -298,7 +441,27 @@ export default function SearchPage() {
               loading={resultsLoading}
               compact
             />
-            <p className="muted">Results for: "{submittedQuery}"</p>
+            <p className="muted results-for-label">
+              <span>Results for:</span>{' '}
+              <strong className="results-for-query">"{submittedQuery}"</strong>
+            </p>
+            {refineChips.length > 0 ? (
+              <div className="refine-chips" aria-label="Refine query suggestions">
+                {refineChips.map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    className="refine-chip"
+                    disabled={resultsLoading || isLoadingMore}
+                    onClick={() => {
+                      void onSearch(chip);
+                    }}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </section>
 
           {resultsLoading ? (
@@ -336,16 +499,7 @@ export default function SearchPage() {
             <section className="card stack">
               <h2>Summary</h2>
               <p className="muted">{response.summaryError ?? 'AI summary unavailable right now.'}</p>
-              {response.sources.length > 0 ? (
-                <div className="stack">
-                  <strong>Sources</strong>
-                  {response.sources.map((source) => (
-                    <a key={source.url} href={source.url} target="_blank" rel="noreferrer">
-                      {source.title}
-                    </a>
-                  ))}
-                </div>
-              ) : null}
+              <SummarySourceList sources={response.sources} />
             </section>
           ) : null}
 

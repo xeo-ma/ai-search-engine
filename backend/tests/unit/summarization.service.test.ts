@@ -124,6 +124,38 @@ test('definition-style summaries collapse duplicate definition sentences and nor
   );
 });
 
+test('suppresses evidence claims when the only claim duplicates the summary', async () => {
+  const provider = new StubProvider(
+    [
+      'Physics is the science that deals with the structure of matter and the interactions between the fundamental constituents of the observable universe.',
+      'Reference sources generally describe this concept in similar terms.',
+    ].join(' '),
+  );
+  const service = new SummarizationService({ provider });
+
+  const results = [
+    makeSource(
+      '1',
+      'Physics | Britannica',
+      'https://www.britannica.com/science/physics-science',
+      'Physics, science that deals with the structure of matter and the interactions between the fundamental constituents of the observable universe.',
+    ),
+    makeSource(
+      '2',
+      'Physics - Wikipedia',
+      'https://en.wikipedia.org/wiki/Physics',
+      'Physics is the scientific study of matter, its fundamental constituents, its motion and behavior through space and time, and the related entities of energy and force.',
+    ),
+  ];
+
+  const out = await service.summarize('physics', results);
+  assert.equal(
+    out.summary,
+    'Physics is the science that deals with the structure of matter and the interactions between the fundamental constituents of the observable universe. Reference sources generally describe this concept in similar terms.',
+  );
+  assert.equal(out.claims.length, 0);
+});
+
 test('definition-style summaries rewrite dictionary meaning phrasing to usage context', async () => {
   const provider = new StubProvider('The meaning of SYNTHESIZE is to combine or produce by synthesis.');
   const service = new SummarizationService({ provider });
@@ -325,6 +357,98 @@ test('explanatory framework queries prioritize official docs sources over tutori
   assert.ok(out.sources.some((source) => source.url.includes('github.com/fastify')));
 });
 
+test('suffix explanatory queries prefer canonical references over social and blog title matches', async () => {
+  const provider = new StubProvider(
+    'Physics is the science that deals with matter, energy, and their interactions.',
+  );
+  const service = new SummarizationService({ provider, openAiApiKey: '' });
+
+  const results = [
+    makeSource(
+      '1',
+      'Physics - Wikipedia',
+      'https://en.wikipedia.org/wiki/Physics',
+      'Physics is the scientific study of matter, motion and behavior through space and time, and the related entities of energy and force.',
+    ),
+    makeSource(
+      '2',
+      'Physics | Britannica',
+      'https://www.britannica.com/science/physics-science',
+      'Physics is the science that deals with the structure of matter and the interactions between the fundamental constituents of the observable universe.',
+    ),
+    makeSource(
+      '3',
+      'Physics Explained (@PhysicsExplain1) / X',
+      'https://x.com/PhysicsExplain1',
+      'Physics Educator and creator of YouTube channel Physics Explained.',
+    ),
+    makeSource(
+      '4',
+      'Physics Explained: Video Update | Rhett Allain\'s Stuff',
+      'https://rhettallain.com/2020/05/10/physics-explained-video-update/',
+      'Physics Explained is going to start off as the content portion of an algebra-based physics course.',
+    ),
+    makeSource(
+      '5',
+      'Physics - spotlighting exceptional research',
+      'https://physics.aps.org/',
+      'Expert commentary and research highlights across physics.',
+    ),
+  ];
+
+  const out = await service.summarize('Physics explained', results);
+  assert.ok(out.sources.some((source) => source.url.includes('wikipedia.org')));
+  assert.ok(out.sources.some((source) => source.url.includes('britannica.com')));
+  assert.ok(!out.sources.some((source) => source.url.includes('x.com/PhysicsExplain1')));
+  assert.ok(!out.sources.some((source) => source.url.includes('rhettallain.com')));
+});
+
+test('comparison queries preserve both sides and prefer stronger technical sources', async () => {
+  const service = new SummarizationService();
+
+  const results = [
+    makeSource(
+      '1',
+      'OAuth 2.0 Authorization Framework',
+      'https://datatracker.ietf.org/doc/html/rfc6749',
+      'OAuth 2.0 is an authorization framework that enables a third-party application to obtain limited access to an HTTP service.',
+    ),
+    makeSource(
+      '2',
+      'JSON Web Token Introduction',
+      'https://jwt.io/introduction',
+      'JSON Web Token is an open standard used to securely transmit information between parties as a JSON object.',
+    ),
+    makeSource(
+      '3',
+      'OAuth vs JWT: Key Differences Explained | SuperTokens',
+      'https://supertokens.com/blog/oauth-vs-jwt',
+      'JWT: Used for secure information exchange and authentication. OAuth: Involves a multi-step process with different roles.',
+    ),
+    makeSource(
+      '4',
+      'OAuth vs JWT vs API Keys: Which Authentication Should You Use?',
+      'https://dev.to/justwonder/oauth-vs-jwt-vs-api-keys-which-authentication-should-you-use-3dg1',
+      'JWT is often a strong choice for scalable user authentication, while OAuth provides secure delegated access.',
+    ),
+    makeSource(
+      '5',
+      'OAuth vs JWT: Which Authentication Method Should You Use?',
+      'https://aws.plainenglish.io/oauth-vs-jwt-which-authentication-method-should-you-use-123456',
+      'We break down the differences between OAuth and JWT and how to decide which approach fits your use case.',
+    ),
+  ];
+
+  const out = await service.summarize('OAuth vs JWT', results);
+  assert.ok(out.summary);
+  assert.match(out.summary, /OAuth/i);
+  assert.match(out.summary, /JWT/i);
+  assert.ok(!/^JWT:/i.test(out.summary));
+  assert.ok(out.sources.some((source) => source.url.includes('rfc6749')));
+  assert.ok(out.sources.some((source) => source.url.includes('jwt.io')));
+  assert.ok(!out.sources.some((source) => source.url.includes('aws.plainenglish.io')));
+});
+
 test('fallback summary ignores low-information snippet text for news-like queries', async () => {
   const service = new SummarizationService();
 
@@ -430,4 +554,36 @@ test('keeps summary when source confidence is strong', async () => {
   assert.ok(out.summary);
   assert.equal(out.error, null);
   assert.ok(out.sources.some((source) => source.url.includes('wikipedia.org')));
+});
+
+test('technical queries avoid marketing-heavy summary phrasing', async () => {
+  const provider = new StubProvider(
+    "With numbers like these, it's no surprise nearly half of architects have experimented with at least one AI tool.",
+  );
+  const service = new SummarizationService({ provider, openAiApiKey: '' });
+
+  const results = [
+    makeSource(
+      '1',
+      'AI for Architecture: 7 Transformative Use Cases',
+      'https://monograph.com/ai-architecture',
+      'With numbers like these, it is no surprise many architects have tried AI tools.',
+    ),
+    makeSource(
+      '2',
+      'Software architecture - Wikipedia',
+      'https://en.wikipedia.org/wiki/Software_architecture',
+      'Software architecture refers to fundamental structures of software systems.',
+    ),
+    makeSource(
+      '3',
+      'Architecture patterns',
+      'https://www.britannica.com/technology/software-architecture',
+      'Architecture patterns organize software components and interactions.',
+    ),
+  ];
+
+  const out = await service.summarize('ai use cases architecture', results);
+  assert.ok(out.summary);
+  assert.ok(!out.summary.toLowerCase().includes("it's no surprise"));
 });

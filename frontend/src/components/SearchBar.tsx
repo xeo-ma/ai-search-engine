@@ -6,9 +6,17 @@ interface SearchBarProps {
   onSubmit: (query: string) => void;
   loading: boolean;
   compact?: boolean;
+  placeholder?: string;
 }
 
-export function SearchBar({ value, onChange, onSubmit, loading, compact = false }: SearchBarProps) {
+export function SearchBar({
+  value,
+  onChange,
+  onSubmit,
+  loading,
+  compact = false,
+  placeholder = 'Search the web',
+}: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   function submitIfValid(): void {
@@ -20,7 +28,7 @@ export function SearchBar({ value, onChange, onSubmit, loading, compact = false 
 
   return (
     <form
-      className={compact ? 'search-bar search-bar-compact stack' : 'search-bar stack'}
+      className={compact ? 'search-bar search-bar-compact' : 'search-bar'}
       onSubmit={(event) => {
         event.preventDefault();
         submitIfValid();
@@ -31,7 +39,7 @@ export function SearchBar({ value, onChange, onSubmit, loading, compact = false 
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Search the web"
+        placeholder={placeholder}
       />
       <div className="search-bar-actions">
         <button type="submit" disabled={loading}>

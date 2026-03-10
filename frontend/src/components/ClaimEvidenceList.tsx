@@ -12,9 +12,12 @@ export function ClaimEvidenceList({ claims }: ClaimEvidenceListProps) {
 
   return (
     <div className="claim-list stack">
-      {claims.map((claim) => (
+      {claims.map((claim, index) => (
         <section key={claim.id} className="claim-row stack">
-          <p className="claim-label">Claim</p>
+          <div className="claim-heading">
+            <span className="claim-dot" aria-hidden="true" />
+            <p className="claim-label">Fact {index + 1}</p>
+          </div>
           <p className="claim-text">{claim.text}</p>
           {claim.evidence.length > 0 ? (
             <div className="claim-evidence stack">
