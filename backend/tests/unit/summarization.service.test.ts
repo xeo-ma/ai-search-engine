@@ -331,6 +331,36 @@ test('fallback summary avoids truncated ellipsis fragments', async () => {
   assert.ok(!out.summary.includes('...'));
 });
 
+test('fallback summary uses a more informative second sentence for broad term queries when available', async () => {
+  const service = new SummarizationService();
+
+  const results = [
+    makeSource(
+      '1',
+      'Physics | Britannica',
+      'https://www.britannica.com/science/physics-science',
+      'Physics, science that deals with the structure of matter and the interactions between the fundamental constituents of the observable universe.',
+    ),
+    makeSource(
+      '2',
+      'Physics - Wikipedia',
+      'https://en.wikipedia.org/wiki/Physics',
+      'Physics is the scientific study of matter, its fundamental constituents, its motion and behavior through space and time, and the related entities of energy and force. It is one of the most fundamental scientific disciplines.',
+    ),
+    makeSource(
+      '3',
+      'Physics - spotlighting exceptional research',
+      'https://physics.aps.org/',
+      'Statistical physics is shedding light on how network architecture and data structure shape the effectiveness of neural-network learning.',
+    ),
+  ];
+
+  const out = await service.summarize('physics', results);
+  assert.ok(out.summary);
+  assert.ok(out.summary.includes('It is one of the most fundamental scientific disciplines.'));
+  assert.ok(!out.summary.includes('Reference sources generally describe this concept in similar terms.'));
+});
+
 test('fallback summary uses lightweight contextual phrasing for term queries', async () => {
   const service = new SummarizationService();
 
@@ -480,6 +510,39 @@ test('comparison queries preserve both sides and prefer stronger technical sourc
   assert.ok(out.sources.some((source) => source.url.includes('rfc6749')));
   assert.ok(out.sources.some((source) => source.url.includes('jwt.io')));
   assert.ok(!out.sources.some((source) => source.url.includes('aws.plainenglish.io')));
+});
+
+test('use case queries avoid vendor-copy summaries and prefer category-style sources', async () => {
+  const service = new SummarizationService();
+
+  const results = [
+    makeSource(
+      '1',
+      'Top 5 AI use cases by industry: Boosting efficiency in 2025',
+      'https://www.glean.com/blog/ai-use-cases-by-industry',
+      'Explore how AI drives efficiency in healthcare, finance, manufacturing, retail and logistics in 2025.',
+    ),
+    makeSource(
+      '2',
+      'AI use cases by industry, function and type | Deloitte US',
+      'https://www.deloitte.com/us/en/services/consulting/articles/ai-use-cases-by-industry-function-type.html',
+      'Explore a regularly updated collection of AI use cases by industry, sector, enterprise function and type.',
+    ),
+    makeSource(
+      '3',
+      'AI Use Cases and Key Statistics and Trends for 2026',
+      'https://www.itransition.com/ai/use-cases',
+      'Business functions in which organizations regularly use AI, by industry, including adoption and business value examples.',
+    ),
+  ];
+
+  const out = await service.summarize('AI use cases', results);
+  assert.ok(out.summary);
+  assert.ok(!out.summary.includes('Explore our regularly updated collection'));
+  assert.match(out.summary, /grouped by industry, business function, workflow type, and expected value/i);
+  assert.ok(out.summary.includes('Sources organize use cases by business function, industry, and expected value.'));
+  assert.ok(out.sources.some((source) => source.url.includes('deloitte.com')));
+  assert.ok(!out.sources[0]?.url.includes('glean.com'));
 });
 
 test('fallback summary ignores low-information snippet text for news-like queries', async () => {

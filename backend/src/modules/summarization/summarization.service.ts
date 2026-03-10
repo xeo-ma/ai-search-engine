@@ -60,6 +60,7 @@ const STOP_WORDS = new Set([
 ]);
 const EXPLANATORY_QUERY_PATTERN = /^(what is|what are|what does|explain)\b|\b(explained|overview|basics?)$/i;
 const COMPARISON_QUERY_PATTERN = /\b(vs|versus|compare|difference between)\b/i;
+const USE_CASE_QUERY_PATTERN = /\b(use cases?|applications?|examples?)\b/i;
 const TUTORIAL_TEXT_PATTERN = /\b(introduction|tutorial|guide|practical guide|get started|getting started)\b/i;
 const SOCIAL_DOMAIN_PATTERN = /(?:^|\.)((x\.com|twitter\.com|instagram\.com|facebook\.com|tiktok\.com|linkedin\.com))$/i;
 const PERSONAL_BLOG_PATTERN =
@@ -70,6 +71,9 @@ const BROAD_ACRONYM_QUERY_PATTERN = /^(ai|a\.i\.|ml|llm|nlp)$/i;
 const HACKER_NEWS_QUERY_PATTERN = /^(hacker news|hn)$/i;
 const MARKETING_HEAVY_TEXT_PATTERN =
   /\b(#1|trusted source|top platform|real-time updates|actionable insights|transformative|revolutionary|game[- ]changing|cutting-edge|industry-leading|it'?s no surprise)\b/i;
+const USE_CASE_SOURCE_TEXT_PATTERN =
+  /\b(industry|industries|sector|sectors|function|functions|workflow|workflows|business value|adoption|category|categories|examples?)\b/i;
+const YEAR_HEAVY_PATTERN = /\b20(2[4-9]|3[0-9])\b/;
 const TECHNICAL_QUERY_HINT_PATTERN =
   /\b(architecture|system|design|api|backend|frontend|database|cache|kubernetes|docker|fastify|react|node|typescript|oauth|jwt|csrf|redis|implementation|performance)\b/i;
 const MIN_SUMMARY_CONFIDENCE_SCORE = 0.45;
@@ -412,6 +416,7 @@ export class SummarizationService {
     const seenUrls = new Set<string>();
     const queryTokens = this.extractMeaningfulTokens(query);
     const explanatoryQuery = this.isLikelyExplanatoryQuery(query);
+    const useCaseQuery = this.isUseCaseQuery(query);
     const comparisonQuery = this.isComparisonQuery(query);
     const broadAcronymQuery = this.isBroadAcronymQuery(query);
     const hackerNewsQuery = this.isHackerNewsQuery(query);
@@ -434,7 +439,13 @@ export class SummarizationService {
       return results.slice(0, MAX_SUMMARY_CONTEXT_RESULTS);
     }
 
-    const filteredForIntent = this.filterByQueryIntent(deduped, definitionLikeQuery, explanatoryQuery, comparisonQuery);
+    const filteredForIntent = this.filterByQueryIntent(
+      deduped,
+      definitionLikeQuery,
+      explanatoryQuery,
+      comparisonQuery,
+      useCaseQuery,
+    );
 
     const scored = filteredForIntent
       .map((result, index) => ({
@@ -445,6 +456,7 @@ export class SummarizationService {
           queryTokens,
           definitionLikeQuery,
           explanatoryQuery,
+          useCaseQuery,
           comparisonQuery,
           comparisonSides,
           broadAcronymQuery,
@@ -487,7 +499,20 @@ export class SummarizationService {
     definitionLikeQuery: boolean,
     explanatoryQuery: boolean,
     comparisonQuery: boolean,
+    useCaseQuery: boolean,
   ): SummarySource[] {
+    if (useCaseQuery) {
+      const useCasePreferred = results.filter(
+        (result) =>
+          !this.isLikelySocialOrPersonalSource(result) &&
+          !this.isLikelyBlogHost(result.url) &&
+          !this.isLikelyCommercialSource(result),
+      );
+      if (useCasePreferred.length >= 2) {
+        return useCasePreferred;
+      }
+    }
+
     if (comparisonQuery) {
       const comparisonPreferred = results.filter(
         (result) =>
@@ -562,6 +587,7 @@ export class SummarizationService {
     queryTokens: string[],
     definitionLikeQuery: boolean,
     explanatoryQuery: boolean,
+    useCaseQuery: boolean,
     comparisonQuery: boolean,
     comparisonSides: string[],
     broadAcronymQuery: boolean,
@@ -570,6 +596,25 @@ export class SummarizationService {
     let score = 0;
     score += this.queryOverlapScore(result, queryTokens) * 8;
     score += this.authorityScore(result.url);
+
+    if (useCaseQuery) {
+      const text = `${result.title} ${result.description}`.toLowerCase();
+      if (USE_CASE_SOURCE_TEXT_PATTERN.test(text)) {
+        score += 2.5;
+      }
+      if (this.isReferenceResult(result)) {
+        score += 1.5;
+      }
+      if (this.isLikelyBlogHost(result.url)) {
+        score -= 2;
+      }
+      if (YEAR_HEAVY_PATTERN.test(text)) {
+        score -= 1;
+      }
+      if (this.isLikelyCommercialSource(result)) {
+        score -= 2;
+      }
+    }
 
     if (comparisonQuery) {
       score += this.comparisonCoverageScore(result, comparisonSides);
@@ -642,6 +687,10 @@ export class SummarizationService {
 
   private isLikelyExplanatoryQuery(query: string): boolean {
     return EXPLANATORY_QUERY_PATTERN.test(query.trim());
+  }
+
+  private isUseCaseQuery(query: string): boolean {
+    return USE_CASE_QUERY_PATTERN.test(query.trim());
   }
 
   private isComparisonQuery(query: string): boolean {
@@ -909,6 +958,13 @@ export class SummarizationService {
       }
     }
 
+    if (this.isUseCaseQuery(query)) {
+      const useCaseSummary = this.buildUseCaseFallbackSummary(query, sources);
+      if (useCaseSummary) {
+        return useCaseSummary;
+      }
+    }
+
     const leadSourcePool = (() => {
       if (this.isHackerNewsQuery(query)) {
         const hackerNewsPreferred = sources
@@ -947,7 +1003,7 @@ export class SummarizationService {
       if (!titleFallbackLead) {
         return null;
       }
-      const supportOnly = this.buildFallbackSupportSentence(query, sources);
+      const supportOnly = this.buildFallbackContextSentence(query, sources, titleFallbackLead);
       return [titleFallbackLead, supportOnly].filter(Boolean).join(' ');
     }
 
@@ -965,7 +1021,7 @@ export class SummarizationService {
         fallback && !this.isLikelyIncompleteSentence(fallback)
           ? this.ensureSentencePunctuation(fallback)
           : titleFallbackLead;
-      const supportOnly = this.buildFallbackSupportSentence(query, sources);
+      const supportOnly = this.buildFallbackContextSentence(query, sources, lead);
       return [lead, supportOnly].filter(Boolean).join(' ');
     }
 
@@ -975,8 +1031,21 @@ export class SummarizationService {
     }
 
     const lead = this.ensureSentencePunctuation(this.rephraseFallbackLead(query, leadSentence));
-    const support = this.buildFallbackSupportSentence(query, sources);
+    const support = this.buildFallbackContextSentence(query, sources, lead);
     return [lead, support].filter(Boolean).join(' ');
+  }
+
+  private buildFallbackContextSentence(
+    query: string,
+    results: SummarySource[],
+    leadSentence: string | null,
+  ): string | null {
+    const informativeSupport = this.buildInformativeSupportSentence(query, results, leadSentence);
+    if (informativeSupport) {
+      return informativeSupport;
+    }
+
+    return this.buildFallbackSupportSentence(query, results);
   }
 
   private isInformativeFallbackSnippet(snippet: string): boolean {
@@ -994,6 +1063,69 @@ export class SummarizationService {
     }
 
     return true;
+  }
+
+  private buildInformativeSupportSentence(
+    query: string,
+    results: SummarySource[],
+    leadSentence: string | null,
+  ): string | null {
+    if (
+      results.length === 0 ||
+      /\bnews\b/i.test(query) ||
+      this.isComparisonQuery(query) ||
+      this.isUseCaseQuery(query)
+    ) {
+      return null;
+    }
+
+    const normalizedLead = leadSentence?.replace(/\s+/g, ' ').trim() ?? '';
+    const definitionLikeQuery = this.isLikelyDefinitionQuery(query);
+    const broadAcronymQuery = this.isBroadAcronymQuery(query);
+
+    const candidates = results.flatMap((result, resultIndex) => {
+      const sentences = result.description.match(SENTENCE_SPLIT_PATTERN) ?? [result.description];
+      return sentences.map((sentence, sentenceIndex) => ({
+        result,
+        resultIndex,
+        sentence: sentence.replace(/\s+/g, ' ').trim().replace(/\s*\.\.\.\s*$/, ''),
+        sentenceIndex,
+      }));
+    });
+
+    const ranked = candidates
+      .filter((candidate) => candidate.sentence.length >= 25)
+      .filter((candidate) => !LOW_INFORMATION_SNIPPET_PATTERN.test(candidate.sentence))
+      .filter((candidate) => !SUPPORT_SENTENCE_PATTERN.test(candidate.sentence))
+      .filter((candidate) => !this.isLikelyIncompleteSentence(candidate.sentence))
+      .filter((candidate) => !this.isLikelySocialOrPersonalSource(candidate.result))
+      .filter((candidate) => !(broadAcronymQuery && this.isProductResult(candidate.result)))
+      .filter((candidate) => {
+        if (!normalizedLead) {
+          return true;
+        }
+
+        return definitionLikeQuery
+          ? !this.isDuplicateDefinitionSentence(normalizedLead, candidate.sentence, query)
+          : this.sentenceSimilarity(normalizedLead, candidate.sentence) < 0.55;
+      })
+      .map((candidate) => ({
+        ...candidate,
+        score:
+          (this.isReferenceResult(candidate.result) ? 3 : 0) +
+          (candidate.sentenceIndex > 0 ? 2 : 0) +
+          (candidate.resultIndex > 0 ? 1 : 0) +
+          (/^(it|they|this|these)\b/i.test(candidate.sentence) ? 1 : 0) -
+          (/^[A-Z][A-Za-z0-9\s-]{0,40}\bis\b/i.test(candidate.sentence) ? 1 : 0),
+      }))
+      .sort((a, b) => b.score - a.score || a.resultIndex - b.resultIndex || a.sentenceIndex - b.sentenceIndex);
+
+    const best = ranked[0];
+    if (!best || best.score < 4) {
+      return null;
+    }
+
+    return this.ensureSentencePunctuation(best.sentence);
   }
 
   private isLikelyIncompleteSentence(sentence: string): boolean {
@@ -1051,6 +1183,10 @@ export class SummarizationService {
       return 'Sources distinguish their roles, tradeoffs, and typical use cases.';
     }
 
+    if (this.isUseCaseQuery(query)) {
+      return 'Sources organize use cases by business function, industry, and expected value.';
+    }
+
     const variants = [
       'Reference sources generally describe this concept in similar terms.',
       'Across reference sources, the core meaning remains consistent.',
@@ -1101,6 +1237,44 @@ export class SummarizationService {
     }
 
     return `${left} and ${right} are related but serve different roles. ${this.buildFallbackSupportSentence(query, results)}`;
+  }
+
+  private buildUseCaseFallbackSummary(query: string, results: SummarySource[]): string | null {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) {
+      return null;
+    }
+
+    const subject = normalizedQuery
+      .replace(/\b(use cases?|applications?|examples?)\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const label = subject || normalizedQuery;
+    const lowerLabel = label.toLowerCase();
+    const article = /^[aeiou]/i.test(label) ? 'an' : 'a';
+    const prefix = lowerLabel === 'ai' ? 'AI' : label;
+
+    const sourceWithCategories = results.find((result) =>
+      USE_CASE_SOURCE_TEXT_PATTERN.test(`${result.title} ${result.description}`.toLowerCase()),
+    );
+
+    if (sourceWithCategories) {
+      return [
+        `${prefix} use cases are often grouped by industry, business function, workflow type, and expected value.`,
+        this.buildFallbackSupportSentence(query, results),
+      ]
+        .filter(Boolean)
+        .join(' ');
+    }
+
+    return [
+      `Common ${article} ${lowerLabel} use cases span multiple workflows and are usually organized by implementation goals and business context.`
+        .replace(/\s+/g, ' ')
+        .replace(/\bai\b/i, 'AI'),
+      this.buildFallbackSupportSentence(query, results),
+    ]
+      .filter(Boolean)
+      .join(' ');
   }
 
   private extractComparisonDescriptor(entity: string, results: SummarySource[]): string | null {
