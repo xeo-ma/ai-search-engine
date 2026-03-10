@@ -101,3 +101,6 @@ Optional:
 - Current caches are in-memory and process-local (not shared across instances).
 - Evidence-to-claim mapping uses deterministic heuristics, not perfect sentence-level citation mapping.
 - Sources list is intentionally hidden while evidence is expanded to reduce duplicate verification UI.
+
+## License
+This project is licensed under the MIT License — see the LICENSE file for details.

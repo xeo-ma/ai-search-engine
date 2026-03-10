@@ -1,6 +1,7 @@
 {
   "name": "safe-search-engine",
   "version": "1.0.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "main": "dist/main.js",
