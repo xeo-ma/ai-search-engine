@@ -41,3 +41,43 @@ jobs:
 
       - name: Frontend typecheck
         run: pnpm --dir frontend typecheck
+
+      - name: Summary quality eval
+        run: pnpm eval:summaries
+
+      - name: End-to-end smoke test
+        env:
+          BRAVE_SEARCH_API_KEY: dummy_key
+          BACKEND_BASE_URL: http://localhost:3001
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
+        run: |
+          set -euo pipefail
+
+          pnpm --dir backend dev > /tmp/backend.log 2>&1 &
+          BACKEND_PID=$!
+
+          pnpm --dir frontend dev > /tmp/frontend.log 2>&1 &
+          FRONTEND_PID=$!
+
+          cleanup() {
+            kill "$BACKEND_PID" "$FRONTEND_PID" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          for i in {1..60}; do
+            if curl -fsS http://localhost:3001/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          for i in {1..60}; do
+            if curl -fsS http://localhost:3000 >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          STATUS=$(curl -s -o /tmp/smoke-response.json -w "%{http_code}" "http://localhost:3000/api/tts?text=hello")
+          test "$STATUS" = "503"
+          grep -q "TTS service is not configured" /tmp/smoke-response.json

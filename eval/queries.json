@@ -1,0 +1,556 @@
+{
+  "queries": [
+    {
+      "id": "physics",
+      "query": "physics",
+      "results": [
+        {
+          "id": "1",
+          "title": "Physics - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Physics",
+          "description": "Physics is the scientific study of matter, energy, and their interactions."
+        },
+        {
+          "id": "2",
+          "title": "Physics | Britannica",
+          "url": "https://www.britannica.com/science/physics-science",
+          "description": "Physics is the science that deals with matter and the fundamental forces of nature."
+        },
+        {
+          "id": "3",
+          "title": "APS Physics",
+          "url": "https://physics.aps.org",
+          "description": "Physics research news and analysis from the American Physical Society."
+        }
+      ]
+    },
+    {
+      "id": "ai",
+      "query": "ai",
+      "results": [
+        {
+          "id": "1",
+          "title": "Google AI",
+          "url": "https://ai.google",
+          "description": "Google AI tools and projects for consumers and developers."
+        },
+        {
+          "id": "2",
+          "title": "Artificial intelligence - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Artificial_intelligence",
+          "description": "Artificial intelligence is intelligence demonstrated by machines."
+        },
+        {
+          "id": "3",
+          "title": "Artificial intelligence | Britannica",
+          "url": "https://www.britannica.com/technology/artificial-intelligence",
+          "description": "Artificial intelligence covers methods enabling machines to perform intelligent tasks."
+        }
+      ]
+    },
+    {
+      "id": "fastify",
+      "query": "what is fastify",
+      "results": [
+        {
+          "id": "1",
+          "title": "Fastify Documentation",
+          "url": "https://fastify.dev/docs/latest/Reference/",
+          "description": "Fast and low overhead web framework for Node.js."
+        },
+        {
+          "id": "2",
+          "title": "fastify/fastify",
+          "url": "https://github.com/fastify/fastify",
+          "description": "Fast and low overhead web framework, for Node.js."
+        },
+        {
+          "id": "3",
+          "title": "Introduction to Fastify",
+          "url": "https://www.contentful.com/blog/introduction-to-fastify/",
+          "description": "A practical guide to building Node.js web apps with Fastify."
+        }
+      ]
+    },
+    {
+      "id": "moon",
+      "query": "moon",
+      "results": [
+        {
+          "id": "1",
+          "title": "Moon - NASA",
+          "url": "https://science.nasa.gov/moon/",
+          "description": "NASA resources about the Moon, missions, and lunar science."
+        },
+        {
+          "id": "2",
+          "title": "Moon - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Moon",
+          "description": "Earth's only natural satellite and key driver of tides."
+        },
+        {
+          "id": "3",
+          "title": "Moon facts | Britannica",
+          "url": "https://www.britannica.com/place/Moon",
+          "description": "Overview of the Moon's orbit, composition, and geology."
+        }
+      ]
+    },
+    {
+      "id": "time",
+      "query": "time",
+      "results": [
+        {
+          "id": "1",
+          "title": "Time - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Time",
+          "description": "Time is the continuous progression from past through present to future."
+        },
+        {
+          "id": "2",
+          "title": "The Official U.S. Time",
+          "url": "https://www.time.gov",
+          "description": "Official U.S. time reference from NIST and USNO."
+        },
+        {
+          "id": "3",
+          "title": "Time | Britannica",
+          "url": "https://www.britannica.com/science/time",
+          "description": "Scientific and philosophical interpretations of time."
+        }
+      ]
+    },
+    {
+      "id": "synthesize",
+      "query": "synthesize",
+      "results": [
+        {
+          "id": "1",
+          "title": "SYNTHESIZE Definition & Meaning - Merriam-Webster",
+          "url": "https://www.merriam-webster.com/dictionary/synthesize",
+          "description": "To combine or produce by synthesis."
+        },
+        {
+          "id": "2",
+          "title": "SYNTHESIZE Definition & Meaning | Dictionary.com",
+          "url": "https://www.dictionary.com/browse/synthesize",
+          "description": "To form by combining parts or elements."
+        },
+        {
+          "id": "3",
+          "title": "Cambridge Dictionary - synthesize",
+          "url": "https://dictionary.cambridge.org/dictionary/english/synthesize",
+          "description": "To produce a substance by a chemical process."
+        }
+      ]
+    },
+    {
+      "id": "derive",
+      "query": "derive",
+      "results": [
+        {
+          "id": "1",
+          "title": "DERIVE Definition & Meaning - Merriam-Webster",
+          "url": "https://www.merriam-webster.com/dictionary/derive",
+          "description": "To take, receive, or obtain especially from a specified source."
+        },
+        {
+          "id": "2",
+          "title": "DERIVE Definition & Meaning | Dictionary.com",
+          "url": "https://www.dictionary.com/browse/derive",
+          "description": "To receive or obtain from a source or origin."
+        },
+        {
+          "id": "3",
+          "title": "Online broker for trading anytime, anywhere | Deriv",
+          "url": "https://deriv.com",
+          "description": "Online trading platform and broker services."
+        }
+      ]
+    },
+    {
+      "id": "hacker-news",
+      "query": "hacker news",
+      "results": [
+        {
+          "id": "1",
+          "title": "Hacker News",
+          "url": "https://news.ycombinator.com",
+          "description": "Social news website focused on computer science and entrepreneurship."
+        },
+        {
+          "id": "2",
+          "title": "The Hacker News",
+          "url": "https://thehackernews.com",
+          "description": "Cybersecurity news, threat intelligence, and breach reports."
+        },
+        {
+          "id": "3",
+          "title": "Hacker News now thinks coding is solved",
+          "url": "https://www.reddit.com/r/BetterOffline/comments/example",
+          "description": "Community discussion about shifts in software development."
+        }
+      ]
+    },
+    {
+      "id": "jwt",
+      "query": "jwt authentication",
+      "results": [
+        {
+          "id": "1",
+          "title": "JSON Web Token Introduction - jwt.io",
+          "url": "https://jwt.io/introduction",
+          "description": "JWT is an open standard for securely transmitting information as JSON objects."
+        },
+        {
+          "id": "2",
+          "title": "RFC 7519 - JSON Web Token",
+          "url": "https://www.rfc-editor.org/rfc/rfc7519",
+          "description": "Internet standard specifying JSON Web Tokens."
+        },
+        {
+          "id": "3",
+          "title": "OWASP Cheat Sheet Series",
+          "url": "https://cheatsheetseries.owasp.org",
+          "description": "Security best practices for authentication and session management."
+        }
+      ]
+    },
+    {
+      "id": "csrf",
+      "query": "csrf protection",
+      "results": [
+        {
+          "id": "1",
+          "title": "Cross-site request forgery - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Cross-site_request_forgery",
+          "description": "CSRF attacks trick users into submitting unwanted actions."
+        },
+        {
+          "id": "2",
+          "title": "CSRF Prevention Cheat Sheet - OWASP",
+          "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+          "description": "Practical recommendations for preventing CSRF."
+        },
+        {
+          "id": "3",
+          "title": "Set-Cookie - MDN Web Docs",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie",
+          "description": "Cookie attributes including SameSite and HttpOnly."
+        }
+      ]
+    },
+    {
+      "id": "redis",
+      "query": "redis cache",
+      "results": [
+        {
+          "id": "1",
+          "title": "Redis Documentation",
+          "url": "https://redis.io/docs",
+          "description": "Redis in-memory data store documentation."
+        },
+        {
+          "id": "2",
+          "title": "Redis - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Redis",
+          "description": "Redis is an in-memory key-value data store used as database and cache."
+        },
+        {
+          "id": "3",
+          "title": "Caching Strategies",
+          "url": "https://aws.amazon.com/caching/best-practices/",
+          "description": "General best practices for caching workloads."
+        }
+      ]
+    },
+    {
+      "id": "postgres-index",
+      "query": "postgres index",
+      "results": [
+        {
+          "id": "1",
+          "title": "PostgreSQL Indexes",
+          "url": "https://www.postgresql.org/docs/current/indexes.html",
+          "description": "Official PostgreSQL documentation for index types and usage."
+        },
+        {
+          "id": "2",
+          "title": "Database Index - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Database_index",
+          "description": "A data structure that improves speed of data retrieval operations."
+        },
+        {
+          "id": "3",
+          "title": "Using EXPLAIN in PostgreSQL",
+          "url": "https://www.postgresql.org/docs/current/using-explain.html",
+          "description": "Inspect query plans to understand index usage."
+        }
+      ]
+    },
+    {
+      "id": "kubernetes",
+      "query": "kubernetes",
+      "results": [
+        {
+          "id": "1",
+          "title": "Kubernetes Documentation",
+          "url": "https://kubernetes.io/docs/home/",
+          "description": "Production-grade container orchestration platform documentation."
+        },
+        {
+          "id": "2",
+          "title": "Kubernetes - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Kubernetes",
+          "description": "Open-source container orchestration system."
+        },
+        {
+          "id": "3",
+          "title": "What is Kubernetes?",
+          "url": "https://cloud.google.com/learn/what-is-kubernetes",
+          "description": "Overview of Kubernetes components and workflows."
+        }
+      ]
+    },
+    {
+      "id": "rust-ownership",
+      "query": "rust ownership",
+      "results": [
+        {
+          "id": "1",
+          "title": "The Rust Programming Language - Ownership",
+          "url": "https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html",
+          "description": "Ownership is Rust's core feature for memory safety without garbage collection."
+        },
+        {
+          "id": "2",
+          "title": "Rust ownership explained",
+          "url": "https://www.rust-lang.org/learn",
+          "description": "Learning resources for Rust concepts including ownership and borrowing."
+        },
+        {
+          "id": "3",
+          "title": "Rust - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Rust_(programming_language)",
+          "description": "Rust is a systems programming language focused on safety and performance."
+        }
+      ]
+    },
+    {
+      "id": "react-suspense",
+      "query": "react suspense",
+      "results": [
+        {
+          "id": "1",
+          "title": "React Suspense API Reference",
+          "url": "https://react.dev/reference/react/Suspense",
+          "description": "Suspense lets you display fallback content while waiting for data."
+        },
+        {
+          "id": "2",
+          "title": "React - Suspense for Data Fetching",
+          "url": "https://react.dev/learn",
+          "description": "Guidance for loading states and concurrent rendering patterns."
+        },
+        {
+          "id": "3",
+          "title": "React (web framework) - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/React_(software)",
+          "description": "React is a JavaScript library for building user interfaces."
+        }
+      ]
+    },
+    {
+      "id": "oauth2",
+      "query": "oauth2",
+      "results": [
+        {
+          "id": "1",
+          "title": "OAuth 2.0 Authorization Framework",
+          "url": "https://www.rfc-editor.org/rfc/rfc6749",
+          "description": "RFC 6749 defines OAuth 2.0 authorization framework."
+        },
+        {
+          "id": "2",
+          "title": "OAuth 2.0 Simplified",
+          "url": "https://aaronparecki.com/oauth-2-simplified/",
+          "description": "Developer-oriented explanation of OAuth 2.0 flows."
+        },
+        {
+          "id": "3",
+          "title": "OAuth - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/OAuth",
+          "description": "Open standard for delegated authorization."
+        }
+      ]
+    },
+    {
+      "id": "vector-db",
+      "query": "vector database",
+      "results": [
+        {
+          "id": "1",
+          "title": "Vector database - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Vector_database",
+          "description": "Vector databases store embeddings for similarity search."
+        },
+        {
+          "id": "2",
+          "title": "What is a Vector Database?",
+          "url": "https://www.pinecone.io/learn/vector-database/",
+          "description": "Introduction to vector indexing and nearest-neighbor search."
+        },
+        {
+          "id": "3",
+          "title": "FAISS documentation",
+          "url": "https://faiss.ai",
+          "description": "Library for efficient similarity search and clustering of dense vectors."
+        }
+      ]
+    },
+    {
+      "id": "event-loop",
+      "query": "node event loop",
+      "results": [
+        {
+          "id": "1",
+          "title": "The Node.js Event Loop",
+          "url": "https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick",
+          "description": "Detailed explanation of event loop phases and timers."
+        },
+        {
+          "id": "2",
+          "title": "Event loop - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Event_loop",
+          "description": "Programming construct that waits for and dispatches events."
+        },
+        {
+          "id": "3",
+          "title": "MDN JavaScript event loop",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Event_loop",
+          "description": "How JavaScript handles concurrency with the event loop."
+        }
+      ]
+    },
+    {
+      "id": "grpc",
+      "query": "grpc",
+      "results": [
+        {
+          "id": "1",
+          "title": "gRPC",
+          "url": "https://grpc.io",
+          "description": "High performance, open source universal RPC framework."
+        },
+        {
+          "id": "2",
+          "title": "gRPC - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/GRPC",
+          "description": "gRPC is an open-source RPC framework by Google."
+        },
+        {
+          "id": "3",
+          "title": "Protocol Buffers",
+          "url": "https://protobuf.dev",
+          "description": "Language-neutral serialization format used by gRPC."
+        }
+      ]
+    },
+    {
+      "id": "websocket",
+      "query": "websocket",
+      "results": [
+        {
+          "id": "1",
+          "title": "WebSocket API - MDN",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/API/WebSocket",
+          "description": "WebSocket provides full-duplex communication channels over a single TCP connection."
+        },
+        {
+          "id": "2",
+          "title": "WebSocket - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/WebSocket",
+          "description": "Computer communications protocol for full-duplex communication."
+        },
+        {
+          "id": "3",
+          "title": "RFC 6455 - The WebSocket Protocol",
+          "url": "https://www.rfc-editor.org/rfc/rfc6455",
+          "description": "IETF standard for the WebSocket protocol."
+        }
+      ]
+    },
+    {
+      "id": "docker-layer-cache",
+      "query": "docker layer cache",
+      "results": [
+        {
+          "id": "1",
+          "title": "Docker Build Cache",
+          "url": "https://docs.docker.com/build/cache/",
+          "description": "How Docker build cache works and how to optimize Dockerfiles."
+        },
+        {
+          "id": "2",
+          "title": "Best practices for writing Dockerfiles",
+          "url": "https://docs.docker.com/develop/develop-images/dockerfile_best-practices/",
+          "description": "Guidance for ordering layers to maximize cache reuse."
+        },
+        {
+          "id": "3",
+          "title": "Docker - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Docker_(software)",
+          "description": "Containerization platform and ecosystem overview."
+        }
+      ]
+    },
+    {
+      "id": "pagination",
+      "query": "pagination",
+      "results": [
+        {
+          "id": "1",
+          "title": "Pagination - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Pagination",
+          "description": "Pagination is the process of dividing content into discrete pages."
+        },
+        {
+          "id": "2",
+          "title": "REST API Pagination Best Practices",
+          "url": "https://www.merge.dev/blog/rest-api-pagination",
+          "description": "Offset, cursor, and keyset pagination tradeoffs."
+        },
+        {
+          "id": "3",
+          "title": "GraphQL Pagination",
+          "url": "https://graphql.org/learn/pagination/",
+          "description": "Connection-style pagination patterns in GraphQL."
+        }
+      ]
+    },
+    {
+      "id": "signin-noise",
+      "query": "open source observability",
+      "results": [
+        {
+          "id": "1",
+          "title": "OpenTelemetry",
+          "url": "https://opentelemetry.io",
+          "description": "OpenTelemetry provides vendor-neutral APIs and SDKs for metrics, traces, and logs."
+        },
+        {
+          "id": "2",
+          "title": "Prometheus Monitoring",
+          "url": "https://prometheus.io",
+          "description": "Open-source systems monitoring and alerting toolkit."
+        },
+        {
+          "id": "3",
+          "title": "Sign in to continue",
+          "url": "https://example.com/login",
+          "description": "Sign in to continue and read more."
+        }
+      ]
+    }
+  ]
+}
