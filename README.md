@@ -1,4 +1,5 @@
 # AI Search Engine
+[![CL Checks](https://github.com/xeo-ma/ai-search-engine/actions/workflows/cl-checks.yml/badge.svg)](https://github.com/xeo-ma/ai-search-engine/actions/workflows/cl-checks.yml)
 
 ## Project Overview
 This project is a minimal web search application with an AI summary layer. Users submit a query from a simple web page, receive web search results, and view an AI-generated summary grounded in retrieved sources. The codebase is intentionally simple and explicit so the architecture and data flow are easy to review.
