@@ -8,6 +8,7 @@ import { ResultList } from '../components/ResultList';
 import { SearchBar } from '../components/SearchBar';
 import { SummaryCard } from '../components/SummaryCard';
 import { SummarySourceList } from '../components/SummarySourceList';
+import { SystemTracePanel, type SystemTraceData } from '../components/SystemTracePanel';
 import type { SearchItem } from '../lib/api-client';
 import {
   defineApi,
@@ -215,6 +216,42 @@ function buildRefineQueryChips(query: string): string[] {
   return unique.slice(0, MAX_REFINE_CHIPS);
 }
 
+function detectQueryIntent(query: string): string {
+  const trimmed = query.trim();
+  const lowered = trimmed.toLowerCase();
+  const tokens = lowered.split(/\s+/).filter(Boolean);
+
+  if (!trimmed) {
+    return 'general';
+  }
+
+  if (/\b(vs|versus|compare|difference between)\b/i.test(trimmed)) {
+    return 'comparison';
+  }
+
+  if (/^(how to|how do i|how can i)\b/i.test(trimmed)) {
+    return 'how-to';
+  }
+
+  if (/^(what is|what are|what does|explain)\b/i.test(trimmed) || /\b(explained|overview|basics?)$/i.test(trimmed)) {
+    return 'explanatory';
+  }
+
+  if (/^define\s+/i.test(trimmed) || /\b(definition of|meaning of)\b/i.test(trimmed)) {
+    return 'definition';
+  }
+
+  if (tokens.length === 1 && BROAD_ACRONYM_QUERIES.has(tokens[0] ?? '')) {
+    return 'broad acronym';
+  }
+
+  if (isDefinitionQuery(trimmed)) {
+    return 'definition';
+  }
+
+  return 'general';
+}
+
 export default function SearchPage() {
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
@@ -229,6 +266,8 @@ export default function SearchPage() {
   const [nextPageOffset, setNextPageOffset] = useState(0);
   const [hasMoreResults, setHasMoreResults] = useState(false);
   const [response, setResponse] = useState<SearchResponse>(EMPTY_RESPONSE);
+  const [searchLatencyMs, setSearchLatencyMs] = useState<number | null>(null);
+  const [summaryLatencyMs, setSummaryLatencyMs] = useState<number | null>(null);
   const activeSearchIdRef = useRef(0);
   const hasInitializedFromUrlRef = useRef(false);
   const hasLoadedResults = isResultsView && !resultsLoading && !error;
@@ -268,6 +307,10 @@ export default function SearchPage() {
     setHasMoreResults(false);
     setSummaryStatus('idle');
     setResponse(EMPTY_RESPONSE);
+    setSearchLatencyMs(null);
+    setSummaryLatencyMs(null);
+
+    const searchStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
 
     const definitionWord = isDefinitionQuery(trimmedQuery) ? extractDefinitionWord(trimmedQuery) : null;
     if (definitionWord) {
@@ -294,6 +337,7 @@ export default function SearchPage() {
         summaryError: null,
         claims: [],
       });
+      setSearchLatencyMs((typeof performance !== 'undefined' ? performance.now() : Date.now()) - searchStartedAt);
       setResultsLoading(false);
       setNextPageOffset(1);
       setHasMoreResults(data.moreResultsAvailable ?? data.results.length === PAGE_SIZE);
@@ -306,6 +350,7 @@ export default function SearchPage() {
       setSummaryStatus('loading');
       const summaryInputResults =
         data.selectedEvidence && data.selectedEvidence.length > 0 ? data.selectedEvidence : data.results;
+      const summaryStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
       void (async () => {
         const summaryData = await summarizeApi({
           query: trimmedQuery,
@@ -323,6 +368,7 @@ export default function SearchPage() {
           sources: summaryData.sources ?? previous.sources,
           claims: summaryData.claims ?? [],
         }));
+        setSummaryLatencyMs((typeof performance !== 'undefined' ? performance.now() : Date.now()) - summaryStartedAt);
         setSummaryStatus(summaryData.summary || (summaryData.claims?.length ?? 0) > 0 ? 'ready' : 'error');
       })();
     } catch (err) {
@@ -336,6 +382,30 @@ export default function SearchPage() {
       setSummaryStatus('idle');
     }
   }
+
+  const traceSelectedSources =
+    response.sources.length > 0
+      ? response.sources
+      : (response.selectedEvidence ?? []).slice(0, 3).map((source) => ({
+          title: source.title,
+          url: source.url,
+          domain: source.displayUrl,
+          snippet: source.description,
+        }));
+
+  const systemTrace: SystemTraceData | null = hasLoadedResults
+    ? {
+        query: submittedQuery,
+        intent: detectQueryIntent(submittedQuery),
+        expandedQueries: refineChips,
+        retrievedCount: response.retrievedCount ?? null,
+        selectedCount: response.selectedCount ?? null,
+        selectedSources: traceSelectedSources,
+        latencyMs:
+          searchLatencyMs !== null ? searchLatencyMs + (summaryLatencyMs ?? 0) : summaryLatencyMs ?? null,
+        claimCount: response.claims.length,
+      }
+    : null;
 
   useEffect(() => {
     if (hasInitializedFromUrlRef.current || typeof window === 'undefined') {
@@ -492,7 +562,12 @@ export default function SearchPage() {
           ) : null}
 
           {hasLoadedResults && summaryStatus === 'ready' && response.summary ? (
-            <SummaryCard summary={response.summary} sources={response.sources} claims={response.claims} />
+            <SummaryCard
+              summary={response.summary}
+              sources={response.sources}
+              claims={response.claims}
+              trace={systemTrace}
+            />
           ) : null}
 
           {hasLoadedResults && summaryStatus === 'error' ? (
@@ -500,6 +575,7 @@ export default function SearchPage() {
               <h2>Summary</h2>
               <p className="muted">{response.summaryError ?? 'AI summary unavailable right now.'}</p>
               <SummarySourceList sources={response.sources} />
+              {systemTrace ? <SystemTracePanel trace={systemTrace} /> : null}
             </section>
           ) : null}
 

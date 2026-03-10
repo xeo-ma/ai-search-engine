@@ -13,6 +13,16 @@ describe('SummaryCard', () => {
           { title: 'NASA Moon Overview', url: 'https://www.nasa.gov/moon' },
           { title: 'Britannica Moon', url: 'https://www.britannica.com/science/Moon' },
         ]}
+        trace={{
+          query: 'moon',
+          intent: 'definition',
+          expandedQueries: ['moon explained'],
+          retrievedCount: 10,
+          selectedCount: 3,
+          selectedSources: [{ title: 'NASA Moon Overview', url: 'https://www.nasa.gov/moon', domain: 'www.nasa.gov' }],
+          latencyMs: 1140,
+          claimCount: 0,
+        }}
       />,
     );
 
@@ -23,6 +33,10 @@ describe('SummaryCard', () => {
       'href',
       'https://www.britannica.com/science/Moon',
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Show system trace' }));
+    expect(screen.getByText('System trace')).toBeInTheDocument();
+    expect(screen.getByText('moon')).toBeInTheDocument();
+    expect(screen.getByText('definition')).toBeInTheDocument();
   });
 
   it('shows fallback copy when there are no sources', () => {
@@ -81,13 +95,14 @@ describe('SummaryCard', () => {
     expect(summaryCard).not.toBeNull();
     const scoped = within(summaryCard as HTMLElement);
 
-    fireEvent.click(scoped.getByRole('button', { name: 'Show evidence' }));
+    fireEvent.click(scoped.getByRole('button', { name: 'Show source basis' }));
     expect(scoped.getByText('Key sources behind this summary')).toBeInTheDocument();
     expect(scoped.getByRole('link', { name: 'Physics | Britannica' })).toHaveAttribute(
       'href',
       'https://www.britannica.com/science/physics-science',
     );
     expect(scoped.queryByText('Sources')).not.toBeInTheDocument();
+    expect(scoped.getByRole('button', { name: 'Hide source basis' })).toBeInTheDocument();
   });
 
   it('hides bottom sources while evidence is expanded', () => {

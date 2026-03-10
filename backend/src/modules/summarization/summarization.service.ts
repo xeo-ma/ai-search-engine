@@ -46,6 +46,7 @@ const AUTHORITY_DOMAIN_SCORES: Array<[RegExp, number]> = [
   [/(?:^|\.)github\.com$/i, 1.5],
   [/(?:^|\.)wikipedia\.org$/i, 3],
   [/(?:^|\.)britannica\.com$/i, 3],
+  [/(?:^|\.)ibm\.com$/i, 2.5],
   [/(?:^|\.)dictionary\.com$/i, 2.5],
   [/(?:^|\.)merriam-webster\.com$/i, 2.5],
   [/(?:^|\.)cambridge\.org$/i, 2.5],
@@ -616,7 +617,10 @@ export class SummarizationService {
         score += 3;
       }
       if (this.isProductResult(result)) {
-        score -= 2.5;
+        score -= 4.5;
+      }
+      if (this.isLikelyCommercialSource(result)) {
+        score -= 2;
       }
     }
 
@@ -1603,7 +1607,7 @@ export class SummarizationService {
       score += 3;
     }
     if (this.isProductSource(source)) {
-      score -= broadAcronymQuery ? 3.5 : 1.5;
+      score -= broadAcronymQuery ? 5 : 1.5;
     }
     if (this.isLowInformationEvidenceSource(source)) {
       score -= 4;
@@ -1662,8 +1666,10 @@ export class SummarizationService {
     const hackerNewsQuery = this.isHackerNewsQuery(query);
     let selected = ranked.slice(0, MAX_SUMMARY_DISPLAY_SOURCES);
     if (broadAcronymQuery) {
-      selected = this.limitProductSources(selected, ranked, 1);
+      selected = this.limitProductSources(selected, ranked, 0);
       selected = this.ensureReferenceSourceInTopN(selected, ranked, 2);
+      selected = this.preferNonProductSources(selected, ranked);
+      selected = this.trimProductSourcesForBroadQuery(selected);
     }
     if (technicalQuery) {
       selected = this.limitMarketingSources(selected, ranked, 0);
@@ -1777,6 +1783,42 @@ export class SummarizationService {
     }
 
     return output;
+  }
+
+  private preferNonProductSources(
+    selected: EvidenceSourceItem[],
+    ranked: EvidenceSourceItem[],
+  ): EvidenceSourceItem[] {
+    const output = [...selected];
+    const replacementCandidates = ranked.filter(
+      (source) =>
+        !this.isProductSource(source) &&
+        !output.some((current) => this.sourceKey(current) === this.sourceKey(source)),
+    );
+
+    for (let i = output.length - 1; i >= 0; i -= 1) {
+      const current = output[i];
+      if (!current || !this.isProductSource(current)) {
+        continue;
+      }
+
+      const replacement = replacementCandidates.shift();
+      if (!replacement) {
+        break;
+      }
+      output[i] = replacement;
+    }
+
+    return output;
+  }
+
+  private trimProductSourcesForBroadQuery(selected: EvidenceSourceItem[]): EvidenceSourceItem[] {
+    const nonProductSources = selected.filter((source) => !this.isProductSource(source));
+    if (nonProductSources.length >= 2) {
+      return nonProductSources;
+    }
+
+    return selected;
   }
 
   private limitMarketingSources(
@@ -1909,6 +1951,13 @@ export class SummarizationService {
       try {
         const hostname = new URL(source.url).hostname.toLowerCase();
         if (PRODUCT_DOMAIN_PATTERN.test(hostname)) {
+          return true;
+        }
+
+        if (
+          hostname.endsWith('.ai') &&
+          /\b(chat|agent|assistant|copilot|model)\b/.test(`${source.title} ${source.snippet}`.toLowerCase())
+        ) {
           return true;
         }
       } catch {}

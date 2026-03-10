@@ -369,6 +369,89 @@ button:disabled {
   margin-top: 2px;
 }
 
+.system-trace-section {
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e8eef6;
+}
+
+.trace-toggle {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: auto;
+  padding: 4px 10px;
+  background: transparent;
+  color: #66778d;
+  border: 1px solid #d8e1ed;
+  border-radius: 999px;
+  line-height: 1.2;
+  font-weight: 550;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.trace-toggle:hover:not(:disabled),
+.trace-toggle:focus-visible {
+  background: #f7f9fc;
+  border-color: #c7d5e7;
+  color: var(--text);
+}
+
+.trace-toggle-glyph {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.system-trace-panel {
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #dde6f1;
+  border-radius: 12px;
+  background: #f7f9fc;
+}
+
+.system-trace-grid {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.system-trace-row {
+  display: grid;
+  gap: 4px;
+}
+
+.system-trace-row dt {
+  color: #5f6d82;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.system-trace-row dd {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.system-trace-value {
+  font-family: "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", monospace;
+  font-size: 0.93rem;
+}
+
+.system-trace-list {
+  margin: 0;
+  padding-left: 16px;
+  color: inherit;
+}
+
+.system-trace-list li + li {
+  margin-top: 3px;
+}
+
 .evidence-toggle:hover:not(:disabled),
 .evidence-toggle:focus-visible {
   background: #e4f0ff;
@@ -408,7 +491,12 @@ button:disabled {
 }
 
 .summary-source-favicon {
-  margin-top: 2px;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  opacity: 0.72;
+  border-color: #e3eaf4;
+  background: #f6f8fc;
 }
 
 .summary-source-copy {
@@ -446,9 +534,9 @@ button:disabled {
   text-overflow: ellipsis;
 }
 
-.claim-list {
-  gap: 10px;
-}
+  .claim-list {
+    gap: 10px;
+  }
 
 .fallback-evidence-panel {
   gap: 8px;

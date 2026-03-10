@@ -6,11 +6,13 @@ import type { SummaryClaim, SummarySourceLink } from '../lib/api-client';
 import { ClaimEvidenceList } from './ClaimEvidenceList';
 import { EvidenceItem } from './EvidenceItem';
 import { SummarySourceList } from './SummarySourceList';
+import { SystemTracePanel, type SystemTraceData } from './SystemTracePanel';
 
 interface SummaryCardProps {
   summary: string;
   sources: SummarySourceLink[];
   claims?: SummaryClaim[];
+  trace?: SystemTraceData | null;
 }
 
 function splitSummaryMetaInsight(summary: string): { primary: string; meta: string | null } {
@@ -35,12 +37,19 @@ function splitSummaryMetaInsight(summary: string): { primary: string; meta: stri
   };
 }
 
-export function SummaryCard({ summary, sources, claims = [] }: SummaryCardProps) {
+export function SummaryCard({ summary, sources, claims = [], trace = null }: SummaryCardProps) {
   const [showEvidence, setShowEvidence] = useState(false);
   const hasClaims = claims.length > 0;
   const hasEvidenceFallback = !hasClaims && sources.length > 0;
   const canShowEvidence = hasClaims || hasEvidenceFallback;
   const { primary, meta } = splitSummaryMetaInsight(summary);
+  const evidenceToggleLabel = hasClaims
+    ? showEvidence
+      ? 'Hide evidence'
+      : 'Show evidence'
+    : showEvidence
+      ? 'Hide source basis'
+      : 'Show source basis';
 
   return (
     <section className="card stack">
@@ -59,7 +68,7 @@ export function SummaryCard({ summary, sources, claims = [] }: SummaryCardProps)
           <span aria-hidden="true" className={`evidence-toggle-chevron${showEvidence ? ' is-open' : ''}`}>
             ˅
           </span>
-          {showEvidence ? 'Hide evidence' : 'Show evidence'}
+          {evidenceToggleLabel}
         </button>
       ) : null}
       {showEvidence && hasClaims ? <ClaimEvidenceList claims={claims} /> : null}
@@ -74,6 +83,7 @@ export function SummaryCard({ summary, sources, claims = [] }: SummaryCardProps)
         </section>
       ) : null}
       {!showEvidence ? <SummarySourceList sources={sources} /> : null}
+      {trace ? <SystemTracePanel trace={trace} /> : null}
     </section>
   );
 }

@@ -245,6 +245,39 @@ test('source selection keeps at least one reference source when available for br
   assert.ok(productSourceCount <= 1);
 });
 
+test('broad acronym queries suppress product-style chat sources when stronger references exist', async () => {
+  const provider = new StubProvider(
+    'Artificial intelligence is the capability of computational systems to perform tasks typically associated with human intelligence.',
+  );
+  const service = new SummarizationService({ provider, openAiApiKey: '' });
+
+  const results = [
+    makeSource(
+      '1',
+      'Artificial intelligence - Wikipedia',
+      'https://en.wikipedia.org/wiki/Artificial_intelligence',
+      'Artificial intelligence is the capability of computational systems to perform tasks typically associated with human intelligence.',
+    ),
+    makeSource(
+      '2',
+      'What Is Artificial Intelligence (AI)? | IBM',
+      'https://www.ibm.com/think/topics/artificial-intelligence',
+      'Artificial intelligence leverages computers and machines to mimic the problem-solving and decision-making capabilities of the human mind.',
+    ),
+    makeSource(
+      '3',
+      'Z.ai - Free AI Chatbot & Agent powered by GLM-5 & GLM-4.7',
+      'https://chat.z.ai/',
+      'Free AI chatbot and agent with advanced reasoning and multimodal capabilities.',
+    ),
+  ];
+
+  const out = await service.summarize('ai', results);
+  assert.ok(out.sources.some((source) => source.url.includes('wikipedia.org')));
+  assert.ok(out.sources.some((source) => source.url.includes('ibm.com')));
+  assert.ok(!out.sources.some((source) => source.url.includes('chat.z.ai')));
+});
+
 test('claim extraction merges punctuation-led fragments into the previous claim', async () => {
   const provider = new StubProvider(
     [
