@@ -62,6 +62,8 @@ const TUTORIAL_TEXT_PATTERN = /\b(introduction|tutorial|guide|practical guide|ge
 const BROAD_ACRONYM_QUERY_PATTERN = /^(ai|a\.i\.|ml|llm|nlp)$/i;
 const HACKER_NEWS_QUERY_PATTERN = /^(hacker news|hn)$/i;
 const MARKETING_HEAVY_TEXT_PATTERN = /\b(#1|trusted source|top platform|real-time updates|actionable insights)\b/i;
+const MIN_SUMMARY_CONFIDENCE_SCORE = 0.45;
+const LOW_CONFIDENCE_SUMMARY_MESSAGE = 'Not enough reliable sources yet to generate a trustworthy summary.';
 
 export interface SummarizationResult {
   summary: string | null;
@@ -125,13 +127,16 @@ export class SummarizationService {
         const grounded = await this.claimEvidenceClient.generate(trimmedQuery, definitionStyleQuery);
         const groundedSources = this.selectDisplaySources(grounded.sources, trimmedQuery);
         if (groundedSources.length === 0) {
-          return this.buildLocalFallbackResponse(
+          const response = this.buildLocalFallbackResponse(
             candidateResults,
             rankedFallbackSources,
             maxSentences,
             trimmedQuery,
             definitionStyleQuery,
           );
+          const gated = this.applySummaryConfidenceGate(trimmedQuery, response);
+          this.writeSummaryCache(cacheKey, gated);
+          return gated;
         } else {
           const normalizedSummary = this.toNaturalSummary(
             grounded.answerText,
@@ -154,8 +159,9 @@ export class SummarizationService {
               sources: groundedSources,
               claims: [],
             };
-            this.writeSummaryCache(cacheKey, response);
-            return response;
+            const gated = this.applySummaryConfidenceGate(trimmedQuery, response);
+            this.writeSummaryCache(cacheKey, gated);
+            return gated;
           }
 
           const response = {
@@ -164,8 +170,9 @@ export class SummarizationService {
             sources: groundedSources,
             claims: this.mapClaimsToEvidence(claimTexts, groundedSources, broadAcronymQuery),
           };
-          this.writeSummaryCache(cacheKey, response);
-          return response;
+          const gated = this.applySummaryConfidenceGate(trimmedQuery, response);
+          this.writeSummaryCache(cacheKey, gated);
+          return gated;
       }
     } catch {
       const response = this.buildLocalFallbackResponse(
@@ -175,8 +182,9 @@ export class SummarizationService {
         trimmedQuery,
         definitionStyleQuery,
       );
-      this.writeSummaryCache(cacheKey, response);
-      return response;
+      const gated = this.applySummaryConfidenceGate(trimmedQuery, response);
+      this.writeSummaryCache(cacheKey, gated);
+      return gated;
     }
     }
 
@@ -194,8 +202,9 @@ export class SummarizationService {
           broadAcronymQuery,
         ),
       };
-      this.writeSummaryCache(cacheKey, response);
-      return response;
+      const gated = this.applySummaryConfidenceGate(trimmedQuery, response);
+      this.writeSummaryCache(cacheKey, gated);
+      return gated;
     }
 
     try {
@@ -216,8 +225,9 @@ export class SummarizationService {
         sources: rankedFallbackSources,
         claims: this.mapClaimsToEvidence(claimTexts, rankedFallbackSources, broadAcronymQuery),
       };
-      this.writeSummaryCache(cacheKey, response);
-      return response;
+      const gated = this.applySummaryConfidenceGate(trimmedQuery, response);
+      this.writeSummaryCache(cacheKey, gated);
+      return gated;
     } catch {
       const response = {
         summary: this.toNaturalSummary(
@@ -230,8 +240,9 @@ export class SummarizationService {
         sources: rankedFallbackSources,
         claims: [],
       };
-      this.writeSummaryCache(cacheKey, response);
-      return response;
+      const gated = this.applySummaryConfidenceGate(trimmedQuery, response);
+      this.writeSummaryCache(cacheKey, gated);
+      return gated;
     }
   }
 
@@ -279,6 +290,93 @@ export class SummarizationService {
         evidence: claim.evidence.map((item) => ({ ...item })),
       })),
     };
+  }
+
+  private applySummaryConfidenceGate(query: string, response: SummarizationResult): SummarizationResult {
+    if (!response.summary) {
+      return response;
+    }
+
+    const lowInformationRatio =
+      response.sources.length > 0
+        ? response.sources.filter((source) => this.isLowInformationEvidenceSource(source)).length / response.sources.length
+        : 0;
+    const navigationalRatio =
+      response.sources.length > 0
+        ? response.sources.filter((source) => this.isNavigationalEvidenceSource(source)).length / response.sources.length
+        : 0;
+
+    if (lowInformationRatio >= 0.67 || navigationalRatio >= 0.67) {
+      return {
+        summary: null,
+        error: LOW_CONFIDENCE_SUMMARY_MESSAGE,
+        sources: response.sources,
+        claims: [],
+      };
+    }
+
+    const confidence = this.estimateSummaryConfidence(query, response.sources, response.claims);
+    if (confidence >= MIN_SUMMARY_CONFIDENCE_SCORE) {
+      return response;
+    }
+
+    return {
+      summary: null,
+      error: LOW_CONFIDENCE_SUMMARY_MESSAGE,
+      sources: response.sources,
+      claims: [],
+    };
+  }
+
+  private estimateSummaryConfidence(query: string, sources: EvidenceSourceItem[], claims: SummaryClaim[]): number {
+    if (sources.length === 0) {
+      return 0;
+    }
+
+    const queryTokens = this.extractMeaningfulTokens(query);
+    const referenceCount = sources.filter((source) => this.isReferenceSource(source)).length;
+    const productCount = sources.filter((source) => this.isProductSource(source)).length;
+    const informativeSources = sources.filter((source) => !this.isLowInformationEvidenceSource(source)).length;
+    const navigationalSources = sources.filter((source) => this.isNavigationalEvidenceSource(source)).length;
+
+    let score = 0;
+    score += Math.min(0.45, sources.length * 0.15);
+    score += Math.min(0.22, (referenceCount / sources.length) * 0.22);
+    score += Math.min(0.15, (informativeSources / sources.length) * 0.15);
+    score += claims.length > 0 ? Math.min(0.12, claims.length * 0.04) : 0;
+
+    if (queryTokens.length > 0) {
+      const overlapValues = sources.map((source) =>
+        this.tokenOverlapRatio(
+          queryTokens,
+          this.extractMeaningfulTokens(`${source.title} ${source.snippet} ${source.domain}`),
+        ),
+      );
+      const averageOverlap =
+        overlapValues.length > 0 ? overlapValues.reduce((sum, value) => sum + value, 0) / overlapValues.length : 0;
+      score += Math.min(0.28, averageOverlap * 0.28);
+    }
+
+    if (this.isBroadAcronymQuery(query) && referenceCount === 0) {
+      score -= 0.2;
+    }
+    if (productCount > 0 && productCount === sources.length) {
+      score -= 0.12;
+    }
+    if (navigationalSources / sources.length >= 0.7) {
+      score -= 0.2;
+    }
+    if (informativeSources === 0) {
+      score -= 0.25;
+    }
+
+    return Math.max(0, Math.min(1, score));
+  }
+
+  private isNavigationalEvidenceSource(source: EvidenceSourceItem): boolean {
+    return /\b(login|sign in|signin|account|dashboard|portal|continue)\b/i.test(
+      `${source.title} ${source.snippet} ${source.url}`,
+    );
   }
 
   private selectSummaryResults(query: string, results: SummarySource[], definitionLikeQuery: boolean): SummarySource[] {

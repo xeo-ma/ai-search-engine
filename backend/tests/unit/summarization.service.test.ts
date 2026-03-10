@@ -381,3 +381,53 @@ test('hacker news query prefers news.ycombinator.com over marketing-heavy altern
   assert.ok(out.sources.length >= 1);
   assert.ok(out.sources.some((source) => source.url.includes('news.ycombinator.com')));
 });
+
+test('suppresses summary when selected sources are low-confidence', async () => {
+  const provider = new StubProvider('Acme portal lets users sign in and manage an account.');
+  const service = new SummarizationService({ provider, openAiApiKey: '' });
+
+  const results = [
+    makeSource(
+      '1',
+      'Acme Portal Login',
+      'https://portal.example.com/login',
+      'Sign in to continue and access your account dashboard.',
+    ),
+    makeSource(
+      '2',
+      'Acme Account',
+      'https://accounts.example.com/',
+      'Log in to continue and manage your settings.',
+    ),
+  ];
+
+  const out = await service.summarize('acme portal', results);
+  assert.equal(out.summary, null);
+  assert.equal(out.error, 'Not enough reliable sources yet to generate a trustworthy summary.');
+  assert.equal(out.claims.length, 0);
+});
+
+test('keeps summary when source confidence is strong', async () => {
+  const provider = new StubProvider('Physics studies matter, energy, and their interactions.');
+  const service = new SummarizationService({ provider, openAiApiKey: '' });
+
+  const results = [
+    makeSource(
+      '1',
+      'Physics - Wikipedia',
+      'https://en.wikipedia.org/wiki/Physics',
+      'Physics is the scientific study of matter, energy, and their interactions.',
+    ),
+    makeSource(
+      '2',
+      'Physics | Britannica',
+      'https://www.britannica.com/science/physics-science',
+      'Physics is the science of matter, motion, and force.',
+    ),
+  ];
+
+  const out = await service.summarize('physics', results);
+  assert.ok(out.summary);
+  assert.equal(out.error, null);
+  assert.ok(out.sources.some((source) => source.url.includes('wikipedia.org')));
+});
