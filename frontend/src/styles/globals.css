@@ -140,25 +140,32 @@ button:disabled {
 
 .evidence-toggle {
   width: fit-content;
+  display: inline-flex;
+  align-items: center;
   min-height: auto;
   padding: 0;
-  margin-top: -3px;
+  margin-top: -4px;
   background: transparent;
   color: var(--primary);
   border: 0;
   border-radius: 0;
+  line-height: 1.2;
 }
 
 .summary-text + .evidence-toggle {
-  margin-top: -5px;
+  margin-top: -9px;
 }
 
 .evidence-toggle + .claim-list {
-  margin-top: -3px;
+  margin-top: -6px;
+}
+
+.evidence-toggle + .summary-sources {
+  margin-top: 4px;
 }
 
 .claim-list {
-  gap: 10px;
+  gap: 8px;
 }
 
 .claim-row {
@@ -168,7 +175,7 @@ button:disabled {
 }
 
 .claim-row + .claim-row {
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid #eff4fb;
 }
 
@@ -184,7 +191,7 @@ button:disabled {
 
 .claim-text {
   margin: 0;
-  font-weight: 600;
+  font-weight: 650;
   line-height: 1.38;
 }
 
@@ -193,13 +200,13 @@ button:disabled {
 }
 
 .evidence-list {
-  gap: 5px;
+  gap: 4px;
 }
 
 .evidence-item {
   display: grid;
   gap: 2px;
-  padding-top: 5px;
+  padding-top: 4px;
   border-top: 1px solid #eef3f9;
 }
 
@@ -222,8 +229,8 @@ button:disabled {
 
 .evidence-snippet {
   margin: 0;
-  line-height: 1.36;
-  font-size: 0.87rem;
+  line-height: 1.34;
+  font-size: 0.82rem;
 }
 
 .evidence-link {

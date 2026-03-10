@@ -317,7 +317,7 @@ export default function SearchPage() {
 
           {hasLoadedResults && summaryStatus === 'loading' ? (
             <section className="card stack">
-              <h2>AI Summary</h2>
+              <h2>Summary</h2>
               <div className="summary-skeleton stack" aria-label="AI summary loading">
                 <span className="skeleton-line" />
                 <span className="skeleton-line" />
@@ -332,7 +332,7 @@ export default function SearchPage() {
 
           {hasLoadedResults && summaryStatus === 'error' ? (
             <section className="card stack">
-              <h2>AI Summary</h2>
+              <h2>Summary</h2>
               <p className="muted">{response.summaryError ?? 'AI summary unavailable right now.'}</p>
               {response.sources.length > 0 ? (
                 <div className="stack">
