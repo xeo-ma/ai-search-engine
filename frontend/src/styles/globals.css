@@ -574,8 +574,8 @@ main {
 :root[data-theme='dark'] .sticky-search-bar .search-bar-compact input[type="text"],
 :root[data-theme='dark'] .search-header-card .search-bar-compact input[type="text"],
 :root[data-theme='dark'] input[type='text'] {
-  background: #0a1017;
-  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
   color: var(--text);
 }
 
@@ -593,8 +593,8 @@ main {
 :root[data-theme='dark'] .search-bar-clear-button,
 :root[data-theme='dark'] .settings-theme-control,
 :root[data-theme='dark'] .settings-theme-option.is-active {
-  background: #121b25;
-  border-color: var(--border);
+  background: #1a2532;
+  border-color: rgba(255, 255, 255, 0.1);
   color: var(--text);
   box-shadow: none;
 }
@@ -609,8 +609,8 @@ main {
 :root[data-theme='dark'] .evidence-toggle:focus-visible,
 :root[data-theme='dark'] .history-item:hover,
 :root[data-theme='dark'] .history-item:focus-visible {
-  background: #15212e;
-  border-color: #29415b;
+  background: #223041;
+  border-color: #35506d;
   color: var(--text);
 }
 
@@ -651,7 +651,7 @@ main {
 :root[data-theme='dark'] .claim-row + .claim-row,
 :root[data-theme='dark'] .evidence-item,
 :root[data-theme='dark'] .result-item {
-  border-color: #1f2d3b;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 :root[data-theme='dark'] .summary-source-item:hover,
@@ -692,8 +692,8 @@ main {
 
 :root[data-theme='dark'] .claim-dot,
 :root[data-theme='dark'] .evidence-trust-badge {
-  background: #132846;
-  color: #8fbbff;
+  background: rgba(59, 130, 246, 0.18);
+  color: #60a5fa;
   box-shadow: none;
 }
 
@@ -737,16 +737,24 @@ main {
   -webkit-backdrop-filter: blur(2px);
 }
 
+:root[data-theme='dark'] .confirm-modal {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme='dark'] .confirm-modal-copy h2 {
+  color: #f8fafc;
+}
+
 :root[data-theme='dark'] .confirm-modal-button-secondary {
-  border-color: var(--border);
-  background: #162334;
+  border-color: rgba(255, 255, 255, 0.18);
+  background: transparent;
   color: var(--text);
 }
 
 :root[data-theme='dark'] .confirm-modal-button-secondary:hover,
 :root[data-theme='dark'] .confirm-modal-button-secondary:focus-visible {
-  background: #1a2a3f;
-  border-color: #34506f;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.24);
 }
 
 :root[data-theme='dark'] .skeleton-line {
