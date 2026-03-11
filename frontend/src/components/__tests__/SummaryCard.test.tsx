@@ -22,6 +22,15 @@ describe('SummaryCard', () => {
           selectedSources: [{ title: 'NASA Moon Overview', url: 'https://www.nasa.gov/moon', domain: 'www.nasa.gov' }],
           latencyMs: 1140,
           claimCount: 0,
+          rankingAudit: {
+            safeSearchLevel: 'strict',
+            reranked: true,
+            lowTrustDemotions: 1,
+            spammyDemotions: 0,
+            sensitiveDemotions: 0,
+            contextualSensitiveDemotions: 0,
+            topDemotionReasons: ['low-trust domains'],
+          },
         }}
       />,
     );
@@ -37,6 +46,7 @@ describe('SummaryCard', () => {
     expect(screen.getByText('System trace')).toBeInTheDocument();
     expect(screen.getByText('moon')).toBeInTheDocument();
     expect(screen.getByText('definition')).toBeInTheDocument();
+    expect(screen.getByText(/Quality reranking applied/)).toBeInTheDocument();
   });
 
   it('shows fallback copy when there are no sources', () => {

@@ -23,6 +23,17 @@ export interface SearchResultDto {
   age?: string | undefined;
 }
 
+export interface SearchRankingAuditDto {
+  safeModeRequested: boolean;
+  safeSearchLevel: 'strict' | 'off';
+  reranked: boolean;
+  lowTrustDemotions: number;
+  spammyDemotions: number;
+  sensitiveDemotions: number;
+  contextualSensitiveDemotions: number;
+  topDemotionReasons: string[];
+}
+
 export interface SearchResponseDto {
   query: string;
   safeModeApplied: boolean;
@@ -33,5 +44,6 @@ export interface SearchResponseDto {
   retrievedCount?: number | undefined;
   selectedCount?: number | undefined;
   selectedEvidence?: SearchResultDto[] | undefined;
+  rankingAudit?: SearchRankingAuditDto | undefined;
   moreResultsAvailable?: boolean | undefined;
 }

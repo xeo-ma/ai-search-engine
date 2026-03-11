@@ -512,6 +512,17 @@ export default function SearchPage() {
         latencyMs:
           searchLatencyMs !== null ? searchLatencyMs + (summaryLatencyMs ?? 0) : summaryLatencyMs ?? null,
         claimCount: response.claims.length,
+        rankingAudit: response.rankingAudit
+          ? {
+              safeSearchLevel: response.rankingAudit.safeSearchLevel,
+              reranked: response.rankingAudit.reranked,
+              lowTrustDemotions: response.rankingAudit.lowTrustDemotions,
+              spammyDemotions: response.rankingAudit.spammyDemotions,
+              sensitiveDemotions: response.rankingAudit.sensitiveDemotions,
+              contextualSensitiveDemotions: response.rankingAudit.contextualSensitiveDemotions,
+              topDemotionReasons: response.rankingAudit.topDemotionReasons,
+            }
+          : null,
       }
     : null;
 

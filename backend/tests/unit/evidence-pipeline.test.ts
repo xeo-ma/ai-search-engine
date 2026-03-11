@@ -2,10 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  buildRankingAudit,
   buildSummaryEvidenceSelection,
   dedupeSearchResults,
   rankSearchResults,
   normalizeSearchResults,
+  rerankSearchResults,
   selectEvidenceForSummary,
 } from '../../src/modules/search/evidence-pipeline.js';
 import type { SearchResultDto } from '../../src/modules/search/dto.js';
@@ -116,4 +118,139 @@ test('broad acronym queries prefer neutral reference evidence over product pages
       return domain.includes('wikipedia.org') || domain.includes('britannica.com');
     }),
   );
+});
+
+test('rerankSearchResults demotes social and low-trust domains below stronger references', () => {
+  const reranked = rerankSearchResults('artificial intelligence', [
+    makeResult(
+      '1',
+      'Artificial intelligence - Wikipedia',
+      'https://en.wikipedia.org/wiki/Artificial_intelligence',
+      'Artificial intelligence is intelligence demonstrated by machines.',
+    ),
+    makeResult(
+      '2',
+      'AI explainer thread',
+      'https://x.com/example/status/123',
+      'A thread about artificial intelligence and machine learning basics.',
+    ),
+    makeResult(
+      '3',
+      'What is artificial intelligence? | Britannica',
+      'https://www.britannica.com/technology/artificial-intelligence',
+      'Overview of artificial intelligence and its applications.',
+    ),
+  ]);
+
+  assert.equal(new URL(reranked[0]?.url ?? '').hostname, 'en.wikipedia.org');
+  assert.equal(new URL(reranked[1]?.url ?? '').hostname, 'www.britannica.com');
+  assert.equal(new URL(reranked[2]?.url ?? '').hostname, 'x.com');
+});
+
+test('rankSearchResults demotes spammy year-heavy listicles below stronger technical results', () => {
+  const prepared = dedupeSearchResults(
+    'ai use cases',
+    normalizeSearchResults([
+      makeResult(
+        '1',
+        'Top 10 AI use cases in 2026 to boost efficiency',
+        'https://example.com/top-ai-use-cases',
+        'Top 10 AI use cases in 2026 to boost efficiency across every team.',
+      ),
+      makeResult(
+        '2',
+        'AI use cases by industry | Deloitte',
+        'https://www.deloitte.com/us/en/services/consulting/articles/ai-use-cases.html',
+        'AI use cases organized by industry, function, and business value.',
+      ),
+    ]),
+  ).deduped;
+
+  const ranked = rankSearchResults('ai use cases', prepared).sort((a, b) => b.score - a.score);
+  assert.equal(new URL(ranked[0]?.result.url ?? '').hostname, 'www.deloitte.com');
+  assert.ok((ranked[1]?.breakdown.spammyResultDemotion ?? 0) > 0);
+});
+
+test('safeMode-sensitive ranking demotes explicit result text when safe search is on', () => {
+  const prepared = dedupeSearchResults(
+    'violence overview',
+    normalizeSearchResults([
+      makeResult(
+        '1',
+        'Violence - Wikipedia',
+        'https://en.wikipedia.org/wiki/Violence',
+        'Violence is the use of physical force in a research and historical context.',
+      ),
+      makeResult(
+        '2',
+        'Graphic violence videos',
+        'https://example.com/graphic-violence',
+        'Graphic violence and gore clips collected in one place.',
+      ),
+    ]),
+  ).deduped;
+
+  const ranked = rankSearchResults('violence overview', prepared, { safeMode: true }).sort((a, b) => b.score - a.score);
+  assert.equal(new URL(ranked[0]?.result.url ?? '').hostname, 'en.wikipedia.org');
+  assert.ok((ranked[1]?.breakdown.safeModeSensitiveDemotion ?? 0) > 0);
+});
+
+test('safeMode-sensitive ranking is lighter for educational or news context', () => {
+  const prepared = dedupeSearchResults(
+    'graphic violence reporting',
+    normalizeSearchResults([
+      makeResult(
+        '1',
+        'News report on graphic violence',
+        'https://news.example.com/report',
+        'News reporting and historical context for graphic violence in conflict zones.',
+      ),
+      makeResult(
+        '2',
+        'Graphic violence clips',
+        'https://example.com/clips',
+        'Graphic violence and gore clips with explicit scenes.',
+      ),
+    ]),
+  ).deduped;
+
+  const ranked = rankSearchResults('graphic violence reporting', prepared, { safeMode: true }).sort((a, b) => b.score - a.score);
+  const reporting = ranked.find((item) => item.result.url === 'https://news.example.com/report');
+  const explicit = ranked.find((item) => item.result.url === 'https://example.com/clips');
+
+  assert.ok((reporting?.breakdown.safeModeSensitiveDemotion ?? 0) > 0);
+  assert.ok((reporting?.breakdown.safeModeSensitiveDemotion ?? 0) < (explicit?.breakdown.safeModeSensitiveDemotion ?? 0));
+});
+
+test('buildRankingAudit returns compact demotion counts without raw scores', () => {
+  const audit = buildRankingAudit(
+    'ai use cases',
+    normalizeSearchResults([
+      makeResult(
+        '1',
+        'Top 10 AI use cases in 2026 to boost efficiency',
+        'https://example.com/top-ai-use-cases',
+        'Top 10 AI use cases in 2026 to boost efficiency across every team.',
+      ),
+      makeResult(
+        '2',
+        'AI overview thread',
+        'https://x.com/example/status/123',
+        'A thread about artificial intelligence use cases.',
+      ),
+      makeResult(
+        '3',
+        'AI use cases | Britannica',
+        'https://www.britannica.com/technology/artificial-intelligence',
+        'Overview of artificial intelligence and its applications.',
+      ),
+    ]),
+    { safeMode: true },
+  );
+
+  assert.equal(audit.safeSearchLevel, 'strict');
+  assert.equal(audit.reranked, true);
+  assert.ok(audit.lowTrustDemotions >= 1);
+  assert.ok(audit.spammyDemotions >= 1);
+  assert.ok(audit.topDemotionReasons.length > 0);
 });

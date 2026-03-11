@@ -1,4 +1,4 @@
-import type { SearchResultDto } from './dto.js';
+import type { SearchRankingAuditDto, SearchResultDto } from './dto.js';
 
 const EVIDENCE_SELECTION_LIMIT = 5;
 const TOKEN_PATTERN = /[a-z0-9]+/g;
@@ -8,6 +8,29 @@ const BROAD_ACRONYM_QUERY_PATTERN = /^(ai|a\.i\.|ml|llm|nlp)$/i;
 const REFERENCE_DOMAIN_PATTERN = /(?:^|\.)((wikipedia\.org|britannica\.com|arxiv\.org|nature\.com|science\.org|nih\.gov|nasa\.gov))$/i;
 const PRODUCT_DOMAIN_PATTERN =
   /(?:^|\.)((openai\.com|chatgpt\.com|gemini\.google\.com|cloud\.google\.com|ai\.google|perplexity\.ai|claude\.ai|google\.ai))$/i;
+const LOW_TRUST_DOMAIN_DEMOTIONS: Array<[RegExp, number]> = [
+  [/(?:^|\.)x\.com$/i, 3.2],
+  [/(?:^|\.)twitter\.com$/i, 3.2],
+  [/(?:^|\.)tiktok\.com$/i, 3.2],
+  [/(?:^|\.)instagram\.com$/i, 3.0],
+  [/(?:^|\.)facebook\.com$/i, 3.0],
+  [/(?:^|\.)linkedin\.com$/i, 1.8],
+  [/(?:^|\.)medium\.com$/i, 1.2],
+  [/(?:^|\.)dev\.to$/i, 1.2],
+  [/(?:^|\.)plainenglish\.io$/i, 1.4],
+  [/(?:^|\.)substack\.com$/i, 1.1],
+  [/(?:^|\.)blogspot\.com$/i, 1.6],
+  [/(?:^|\.)wordpress\.com$/i, 1.3],
+  [/(?:^|\.)tumblr\.com$/i, 1.5],
+  [/(?:^|\.)wixsite\.com$/i, 1.6],
+  [/(?:^|\.)weebly\.com$/i, 1.6],
+];
+const SPAMMY_RESULT_PATTERN =
+  /\b(top\s+\d+|best\s+.+\b(2024|2025|2026|2027)\b|boost(ing)? efficiency|ultimate guide|sponsored|advertorial|buy now|limited time|free trial|pricing plans|coupon|promo code)\b/i;
+const SENSITIVE_RESULT_PATTERN =
+  /\b(explicit|porn|porno|pornography|sex video|nude|nudity|xxx|graphic violence|beheading|gore|gory|bloodbath|suicide method|self-harm method)\b/i;
+const SENSITIVE_CONTEXT_ALLOWLIST_PATTERN =
+  /\b(medical|clinical|health|safety|prevention|education|educational|research|news|journalism|reporting|policy|academic|history|historical)\b/i;
 
 const DOMAIN_QUALITY_SCORES: Array<[RegExp, number]> = [
   [/(?:^|\.)wikipedia\.org$/i, 2.5],
@@ -48,6 +71,9 @@ interface ScoreBreakdown {
   lexicalTitleOverlap: number;
   lexicalSnippetOverlap: number;
   sourceQuality: number;
+  lowTrustDomainDemotion: number;
+  spammyResultDemotion: number;
+  safeModeSensitiveDemotion: number;
   broadAcronymReferenceBoost: number;
   broadAcronymProductDemotion: number;
   lowInformationDemotion: number;
@@ -70,6 +96,10 @@ export interface SummaryEvidenceSelection {
   retrievedCount: number;
   selectedCount: number;
   selectedEvidence: SearchResultDto[];
+}
+
+interface RankingOptions {
+  safeMode?: boolean;
 }
 
 function extractDomain(url: string): string {
@@ -142,6 +172,15 @@ function sourceQualityScore(domain: string): number {
   return 0;
 }
 
+function lowTrustDomainDemotion(domain: string): number {
+  for (const [pattern, score] of LOW_TRUST_DOMAIN_DEMOTIONS) {
+    if (pattern.test(domain)) {
+      return score;
+    }
+  }
+  return 0;
+}
+
 function isBroadAcronymQuery(query: string): boolean {
   return BROAD_ACRONYM_QUERY_PATTERN.test(query.trim().toLowerCase());
 }
@@ -152,6 +191,28 @@ function isReferenceDomain(domain: string): boolean {
 
 function isProductDomain(domain: string): boolean {
   return PRODUCT_DOMAIN_PATTERN.test(domain);
+}
+
+function isSpammyResult(result: SearchResultDto): boolean {
+  const content = `${result.title} ${result.description}`;
+  return SPAMMY_RESULT_PATTERN.test(content);
+}
+
+function safeModeSensitiveDemotion(result: SearchResultDto, safeMode: boolean): number {
+  if (!safeMode) {
+    return 0;
+  }
+
+  const content = `${result.title} ${result.description}`;
+  if (!SENSITIVE_RESULT_PATTERN.test(content)) {
+    return 0;
+  }
+
+  if (SENSITIVE_CONTEXT_ALLOWLIST_PATTERN.test(content)) {
+    return 0.8;
+  }
+
+  return 3.4;
 }
 
 function prepareResults(results: SearchResultDto[]): PreparedResult[] {
@@ -229,10 +290,15 @@ export function dedupeSearchResults(query: string, results: SearchResultDto[]): 
   return { deduped, removedExactDuplicates, removedNearDuplicates };
 }
 
-export function rankSearchResults(query: string, preparedResults: PreparedResult[]): RankedSearchResult[] {
+export function rankSearchResults(
+  query: string,
+  preparedResults: PreparedResult[],
+  options: RankingOptions = {},
+): RankedSearchResult[] {
   const queryText = query.trim().toLowerCase();
   const queryTokens = tokenize(queryText);
   const broadAcronymQuery = isBroadAcronymQuery(queryText);
+  const safeMode = options.safeMode ?? true;
   const domainCounts = new Map<string, number>();
 
   for (const item of preparedResults) {
@@ -249,6 +315,9 @@ export function rankSearchResults(query: string, preparedResults: PreparedResult
     const combinedOverlap = overlapRatio(queryTokens, item.mergedTokens);
     const lowInformation = isLowInformation(item.result);
     const sourceQuality = sourceQualityScore(item.domain);
+    const lowTrustDemotion = lowTrustDomainDemotion(item.domain);
+    const spammyResultDemotion = isSpammyResult(item.result) ? 1.5 : 0;
+    const sensitiveDemotion = safeModeSensitiveDemotion(item.result, safeMode);
     const broadAcronymReferenceBoost = broadAcronymQuery && isReferenceDomain(item.domain) ? 1.6 : 0;
     const broadAcronymProductDemotion = broadAcronymQuery && isProductDomain(item.domain) ? 2.4 : 0;
     const domainCount = domainCounts.get(item.domain) ?? 0;
@@ -270,6 +339,9 @@ export function rankSearchResults(query: string, preparedResults: PreparedResult
       lexicalTitleOverlap: titleOverlap * 4,
       lexicalSnippetOverlap: snippetOverlap * 2.5,
       sourceQuality,
+      lowTrustDomainDemotion: lowTrustDemotion,
+      spammyResultDemotion,
+      safeModeSensitiveDemotion: sensitiveDemotion,
       broadAcronymReferenceBoost,
       broadAcronymProductDemotion,
       lowInformationDemotion: lowInformation ? 2.5 : 0,
@@ -285,6 +357,9 @@ export function rankSearchResults(query: string, preparedResults: PreparedResult
       breakdown.lexicalSnippetOverlap +
       breakdown.sourceQuality +
       breakdown.broadAcronymReferenceBoost -
+      breakdown.lowTrustDomainDemotion -
+      breakdown.spammyResultDemotion -
+      breakdown.safeModeSensitiveDemotion -
       breakdown.broadAcronymProductDemotion -
       breakdown.lowInformationDemotion -
       breakdown.duplicateDomainDemotion -
@@ -302,6 +377,23 @@ export function rankSearchResults(query: string, preparedResults: PreparedResult
       breakdown,
     };
   });
+}
+
+export function rerankSearchResults(
+  query: string,
+  results: SearchResultDto[],
+  options: RankingOptions = {},
+): SearchResultDto[] {
+  const normalized = normalizeSearchResults(results);
+  const { deduped } = dedupeSearchResults(query, normalized);
+  const ranked = rankSearchResults(query, deduped, options).sort((left, right) => {
+    if (right.score !== left.score) {
+      return right.score - left.score;
+    }
+    return left.index - right.index;
+  });
+
+  return ranked.map((item) => item.result);
 }
 
 function filterRankedResults(rankedResults: RankedSearchResult[]): RankedSearchResult[] {
@@ -364,10 +456,14 @@ export function selectEvidenceForSummary(rankedResults: RankedSearchResult[], qu
   return selected.slice(0, EVIDENCE_SELECTION_LIMIT).map((item) => item.result);
 }
 
-export function buildSummaryEvidenceSelection(query: string, results: SearchResultDto[]): SummaryEvidenceSelection {
+export function buildSummaryEvidenceSelection(
+  query: string,
+  results: SearchResultDto[],
+  options: RankingOptions = {},
+): SummaryEvidenceSelection {
   const normalized = normalizeSearchResults(results);
   const { deduped } = dedupeSearchResults(query, normalized);
-  const ranked = rankSearchResults(query, deduped);
+  const ranked = rankSearchResults(query, deduped, options);
   const filtered = filterRankedResults(ranked);
   const selectedEvidence = selectEvidenceForSummary(filtered, query);
 
@@ -375,5 +471,60 @@ export function buildSummaryEvidenceSelection(query: string, results: SearchResu
     retrievedCount: normalized.length,
     selectedCount: selectedEvidence.length,
     selectedEvidence,
+  };
+}
+
+export function buildRankingAudit(
+  query: string,
+  results: SearchResultDto[],
+  options: RankingOptions = {},
+): SearchRankingAuditDto {
+  const normalized = normalizeSearchResults(results);
+  const { deduped } = dedupeSearchResults(query, normalized);
+  const ranked = rankSearchResults(query, deduped, options);
+  const safeModeRequested = options.safeMode ?? true;
+
+  let lowTrustDemotions = 0;
+  let spammyDemotions = 0;
+  let sensitiveDemotions = 0;
+  let contextualSensitiveDemotions = 0;
+
+  for (const item of ranked) {
+    if (item.breakdown.lowTrustDomainDemotion > 0) {
+      lowTrustDemotions += 1;
+    }
+    if (item.breakdown.spammyResultDemotion > 0) {
+      spammyDemotions += 1;
+    }
+    if (item.breakdown.safeModeSensitiveDemotion > 0) {
+      sensitiveDemotions += 1;
+      if (item.breakdown.safeModeSensitiveDemotion < 3.4) {
+        contextualSensitiveDemotions += 1;
+      }
+    }
+  }
+
+  const demotionReasonCounts: Array<[string, number]> = [
+    ['low-trust domains', lowTrustDemotions],
+    ['spammy results', spammyDemotions],
+    ['sensitive results', sensitiveDemotions],
+    ['context-softened sensitive results', contextualSensitiveDemotions],
+  ];
+
+  const topDemotionReasons = demotionReasonCounts
+    .filter((entry) => entry[1] > 0)
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 3)
+    .map(([label]) => label);
+
+  return {
+    safeModeRequested,
+    safeSearchLevel: safeModeRequested ? 'strict' : 'off',
+    reranked: true,
+    lowTrustDemotions,
+    spammyDemotions,
+    sensitiveDemotions,
+    contextualSensitiveDemotions,
+    topDemotionReasons,
   };
 }

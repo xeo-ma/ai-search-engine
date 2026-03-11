@@ -6,7 +6,7 @@ import {
   type SearchResponseDto,
   searchRequestSchema,
 } from './dto.js';
-import { buildSummaryEvidenceSelection } from './evidence-pipeline.js';
+import { buildRankingAudit, buildSummaryEvidenceSelection, rerankSearchResults } from './evidence-pipeline.js';
 import { normalizeSnippet } from './snippet-normalizer.js';
 
 export interface SearchServiceOptions {
@@ -115,11 +115,15 @@ export class SearchService {
       });
     }
 
-    const sources = results.slice(0, 3).map((result) => ({
+    const rerankedResults = rerankSearchResults(query, results, { safeMode: request.safeMode });
+    const sources = rerankedResults.slice(0, 3).map((result) => ({
       title: result.title,
       url: result.url,
     }));
-    const evidenceSelection = buildSummaryEvidenceSelection(query, results);
+    const evidenceSelection = buildSummaryEvidenceSelection(query, rerankedResults, {
+      safeMode: request.safeMode,
+    });
+    const rankingAudit = buildRankingAudit(query, results, { safeMode: request.safeMode });
 
     return {
       query: payload.query?.original ?? query,
@@ -127,10 +131,11 @@ export class SearchService {
       summary: null,
       summaryError: null,
       sources,
-      results,
+      results: rerankedResults,
       retrievedCount: evidenceSelection.retrievedCount,
       selectedCount: evidenceSelection.selectedCount,
       selectedEvidence: evidenceSelection.selectedEvidence,
+      rankingAudit,
       moreResultsAvailable: payload.web?.more_results_available,
     };
   }

@@ -17,6 +17,16 @@ export interface SearchResponse {
   retrievedCount?: number;
   selectedCount?: number;
   selectedEvidence?: SearchItem[];
+  rankingAudit?: {
+    safeModeRequested: boolean;
+    safeSearchLevel: 'strict' | 'off';
+    reranked: boolean;
+    lowTrustDemotions: number;
+    spammyDemotions: number;
+    sensitiveDemotions: number;
+    contextualSensitiveDemotions: number;
+    topDemotionReasons: string[];
+  };
   moreResultsAvailable?: boolean;
 }
 

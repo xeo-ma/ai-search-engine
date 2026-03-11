@@ -13,6 +13,15 @@ export interface SystemTraceData {
   selectedSources: SummarySourceLink[];
   latencyMs: number | null;
   claimCount: number;
+  rankingAudit?: {
+    safeSearchLevel: 'strict' | 'off';
+    reranked: boolean;
+    lowTrustDemotions: number;
+    spammyDemotions: number;
+    sensitiveDemotions: number;
+    contextualSensitiveDemotions: number;
+    topDemotionReasons: string[];
+  } | null;
 }
 
 function formatLatency(latencyMs: number | null): string {
@@ -114,6 +123,32 @@ export function SystemTracePanel({ trace }: { trace: SystemTraceData }) {
                 {formatLatency(trace.latencyMs)} latency
               </dd>
             </div>
+
+            {trace.rankingAudit ? (
+              <div className="system-trace-row">
+                <dt>Ranking audit</dt>
+                <dd className="system-trace-value">
+                  Safe mode {trace.rankingAudit.safeSearchLevel}
+                  <br />
+                  {trace.rankingAudit.reranked ? 'Quality reranking applied' : 'No reranking'}
+                  <br />
+                  {trace.rankingAudit.lowTrustDemotions} low-trust, {trace.rankingAudit.spammyDemotions} spam,{' '}
+                  {trace.rankingAudit.sensitiveDemotions} sensitive demotions
+                  {trace.rankingAudit.contextualSensitiveDemotions > 0 ? (
+                    <>
+                      <br />
+                      {trace.rankingAudit.contextualSensitiveDemotions} context-softened
+                    </>
+                  ) : null}
+                  {trace.rankingAudit.topDemotionReasons.length > 0 ? (
+                    <>
+                      <br />
+                      Top reasons: {trace.rankingAudit.topDemotionReasons.join(', ')}
+                    </>
+                  ) : null}
+                </dd>
+              </div>
+            ) : null}
           </dl>
         </div>
       ) : null}
