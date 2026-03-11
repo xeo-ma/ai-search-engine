@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 interface ResetPasswordFormProps {
   token: string | null;
@@ -22,6 +22,8 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordInputRef = useRef<HTMLInputElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,6 +31,26 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   const canSubmit = useMemo(() => {
     return Boolean(token) && password.length >= 8 && password === confirmPassword;
   }, [confirmPassword, password, token]);
+
+  function focusPasswordInput(input: HTMLInputElement | null): void {
+    if (!input) {
+      return;
+    }
+
+    input.focus({ preventScroll: true });
+    const cursor = input.value.length;
+    input.setSelectionRange(cursor, cursor);
+  }
+
+  function togglePasswordVisibility(): void {
+    setShowPassword((current) => !current);
+    requestAnimationFrame(() => focusPasswordInput(passwordInputRef.current));
+  }
+
+  function toggleConfirmPasswordVisibility(): void {
+    setShowConfirmPassword((current) => !current);
+    requestAnimationFrame(() => focusPasswordInput(confirmPasswordInputRef.current));
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -85,6 +107,8 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
           <span>New password</span>
           <span className="auth-input-shell">
             <input
+              key={showPassword ? 'reset-password-visible' : 'reset-password-hidden'}
+              ref={passwordInputRef}
               type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               value={password}
@@ -98,7 +122,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
               className="auth-input-toggle"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               aria-pressed={showPassword}
-              onClick={() => setShowPassword((current) => !current)}
+              onClick={togglePasswordVisibility}
             >
               <EyeIcon hidden={showPassword} />
             </button>
@@ -109,6 +133,8 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
           <span>Confirm password</span>
           <span className="auth-input-shell">
             <input
+              key={showConfirmPassword ? 'reset-confirm-visible' : 'reset-confirm-hidden'}
+              ref={confirmPasswordInputRef}
               type={showConfirmPassword ? 'text' : 'password'}
               autoComplete="new-password"
               value={confirmPassword}
@@ -122,7 +148,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
               className="auth-input-toggle"
               aria-label={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}
               aria-pressed={showConfirmPassword}
-              onClick={() => setShowConfirmPassword((current) => !current)}
+              onClick={toggleConfirmPasswordVisibility}
             >
               <EyeIcon hidden={showConfirmPassword} />
             </button>

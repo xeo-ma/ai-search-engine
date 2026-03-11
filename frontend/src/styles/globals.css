@@ -204,7 +204,7 @@ main {
 }
 
 .auth-input-shell input {
-  padding-right: 58px;
+  padding-right: 62px;
 }
 
 .auth-field input:focus {
@@ -230,7 +230,7 @@ main {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.92);
   color: #6282ad;
 }
 
@@ -1112,6 +1112,7 @@ main {
 }
 
 :root[data-theme='dark'] .auth-input-toggle {
+  background: rgba(13, 20, 28, 0.92);
   color: #9db0c4;
 }
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 type SignInMode = 'password' | 'magic';
 
@@ -25,6 +25,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +41,21 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
 
     return true;
   }, [email, mode, password]);
+
+  function togglePasswordVisibility(): void {
+    setShowPassword((current) => !current);
+
+    requestAnimationFrame(() => {
+      const input = passwordInputRef.current;
+      if (!input) {
+        return;
+      }
+
+      input.focus({ preventScroll: true });
+      const cursor = input.value.length;
+      input.setSelectionRange(cursor, cursor);
+    });
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -128,6 +144,8 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
             </span>
             <span className="auth-input-shell">
               <input
+                key={showPassword ? 'sign-in-password-visible' : 'sign-in-password-hidden'}
+                ref={passwordInputRef}
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 value={password}
@@ -140,7 +158,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
                 className="auth-input-toggle"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 aria-pressed={showPassword}
-                onClick={() => setShowPassword((current) => !current)}
+                onClick={togglePasswordVisibility}
               >
                 <EyeIcon hidden={showPassword} />
               </button>
