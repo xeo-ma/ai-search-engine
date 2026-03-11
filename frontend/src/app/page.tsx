@@ -30,6 +30,7 @@ const EMPTY_RESPONSE: SearchResponse = {
 };
 const PAGE_SIZE = 10;
 const SEARCH_HISTORY_STORAGE_KEY = 'ai-search-history';
+const SAFE_MODE_STORAGE_KEY = 'ai-search-safe-mode';
 const THEME_PREFERENCE_STORAGE_KEY = 'ai-search-theme';
 const MAX_SEARCH_HISTORY_ITEMS = 24;
 const LETTERS_ONLY_PATTERN = /^[a-zA-Z]+$/;
@@ -120,6 +121,23 @@ function readStoredThemePreference(): ThemePreference {
 
   const value = window.localStorage.getItem(THEME_PREFERENCE_STORAGE_KEY);
   return value === 'light' || value === 'dark' || value === 'system' ? value : 'system';
+}
+
+function readStoredSafeMode(): boolean {
+  if (typeof window === 'undefined') {
+    return true;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(SAFE_MODE_STORAGE_KEY);
+    if (raw === null) {
+      return true;
+    }
+
+    return raw !== 'false';
+  } catch {
+    return true;
+  }
 }
 
 function resolveTheme(preference: ThemePreference): 'light' | 'dark' {
@@ -342,6 +360,7 @@ export default function SearchPage() {
   const [searchLatencyMs, setSearchLatencyMs] = useState<number | null>(null);
   const [summaryLatencyMs, setSummaryLatencyMs] = useState<number | null>(null);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
+  const [safeMode, setSafeMode] = useState(true);
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
   const activeSearchIdRef = useRef(0);
   const hasInitializedFromUrlRef = useRef(false);
@@ -350,14 +369,25 @@ export default function SearchPage() {
   const hasLoadedResults = isResultsView && !resultsLoading && !error;
   const refineChips = buildRefineQueryChips(submittedQuery);
 
+  function handleSafeModeChange(nextSafeMode: boolean): void {
+    setSafeMode(nextSafeMode);
+
+    if (!submittedQuery) {
+      return;
+    }
+
+    void onSearch(submittedQuery, { replaceUrl: true, safeModeOverride: nextSafeMode });
+  }
+
   async function onSearch(
     nextQuery?: string,
-    options: { updateUrl?: boolean; replaceUrl?: boolean } = {},
+    options: { updateUrl?: boolean; replaceUrl?: boolean; safeModeOverride?: boolean } = {},
   ): Promise<void> {
     const trimmedQuery = (nextQuery ?? query).trim();
     if (!trimmedQuery) {
       return;
     }
+    const requestedSafeMode = options.safeModeOverride ?? safeMode;
 
     if (options.updateUrl !== false && typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -404,7 +434,7 @@ export default function SearchPage() {
     }
 
     try {
-      const data = await searchApi({ query: trimmedQuery, safeMode: true, count: PAGE_SIZE, offset: 0 });
+      const data = await searchApi({ query: trimmedQuery, safeMode: requestedSafeMode, count: PAGE_SIZE, offset: 0 });
       if (activeSearchIdRef.current !== searchId) {
         return;
       }
@@ -487,6 +517,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     setSearchHistory(readStoredHistory());
+    setSafeMode(readStoredSafeMode());
     setThemePreference(readStoredThemePreference());
     hasLoadedHistoryRef.current = true;
   }, []);
@@ -498,6 +529,14 @@ export default function SearchPage() {
 
     window.localStorage.setItem(SEARCH_HISTORY_STORAGE_KEY, JSON.stringify(searchHistory));
   }, [searchHistory]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(SAFE_MODE_STORAGE_KEY, String(safeMode));
+  }, [safeMode]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -587,7 +626,7 @@ export default function SearchPage() {
     try {
       const data = await searchApi({
         query: submittedQuery,
-        safeMode: true,
+        safeMode,
         count: PAGE_SIZE,
         offset: nextPageOffset,
       });
@@ -643,6 +682,8 @@ export default function SearchPage() {
                 setSearchHistory([]);
               }}
               themePreference={themePreference}
+              safeMode={safeMode}
+              onSafeModeChange={handleSafeModeChange}
               onThemeChange={setThemePreference}
             />
             <p className="landing-eyebrow">Verifiable search engine</p>
@@ -689,6 +730,8 @@ export default function SearchPage() {
             }}
             themePreference={themePreference}
             onThemeChange={setThemePreference}
+            safeMode={safeMode}
+            onSafeModeChange={handleSafeModeChange}
           />
           <section ref={searchHeaderRef} className="card stack search-header-card">
             <SearchBar

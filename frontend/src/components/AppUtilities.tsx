@@ -12,6 +12,8 @@ interface AppUtilitiesProps {
   historyItems: SearchHistoryEntry[];
   onRunHistory: (query: string) => void;
   onClearHistory: () => void;
+  safeMode: boolean;
+  onSafeModeChange: (safeMode: boolean) => void;
   themePreference: ThemePreference;
   onThemeChange: (theme: ThemePreference) => void;
 }
@@ -118,6 +120,8 @@ export function AppUtilities({
   onRunHistory,
   onClearHistory,
   themePreference,
+  safeMode,
+  onSafeModeChange,
   onThemeChange,
 }: AppUtilitiesProps) {
   const [showHistory, setShowHistory] = useState(false);
@@ -220,7 +224,18 @@ export function AppUtilities({
                     <p className="settings-menu-label">Search</p>
                     <div className="settings-menu-row">
                       <span className="settings-menu-value">Safe search</span>
-                      <span className="settings-menu-status">On</span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={safeMode}
+                        aria-label={`Safe search ${safeMode ? 'on' : 'off'}`}
+                        className={`settings-switch${safeMode ? ' is-active' : ''}`}
+                        onClick={() => onSafeModeChange(!safeMode)}
+                      >
+                        <span className="settings-switch-track" aria-hidden="true">
+                          <span className="settings-switch-thumb" />
+                        </span>
+                      </button>
                     </div>
                   </div>
                   <div className="settings-menu-section">
