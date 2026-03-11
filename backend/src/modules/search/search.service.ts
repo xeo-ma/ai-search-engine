@@ -7,11 +7,12 @@ import {
   searchRequestSchema,
 } from './dto.js';
 import { buildRankingAudit, buildSummaryEvidenceSelection, rerankSearchResults } from './evidence-pipeline.js';
-import { buildSearchCapabilities } from './plan-features.js';
+import { buildSearchCapabilities, resolveSearchExecutionPlan } from './plan-features.js';
 import { normalizeSnippet } from './snippet-normalizer.js';
 
 export interface SearchServiceOptions {
   braveApiKey?: string;
+  fetchImpl?: typeof fetch;
 }
 
 interface BraveWebResult {
@@ -34,6 +35,7 @@ const MAX_COUNT = 20;
 
 export class SearchService {
   private readonly braveApiKey: string;
+  private readonly fetchImpl: typeof fetch;
 
   constructor(options: SearchServiceOptions = {}) {
     const apiKey = options.braveApiKey ?? process.env.BRAVE_SEARCH_API_KEY;
@@ -42,19 +44,21 @@ export class SearchService {
     }
 
     this.braveApiKey = apiKey;
+    this.fetchImpl = options.fetchImpl ?? fetch;
   }
 
   async search(input: SearchRequestDto): Promise<SearchResponseDto> {
     const request = searchRequestSchema.parse(input);
     const query = request.query.trim();
-    const count =
+    const requestedCount =
       typeof request.count === 'number'
         ? Math.max(1, Math.min(MAX_COUNT, Math.trunc(request.count)))
         : DEFAULT_COUNT;
+    const executionPlan = resolveSearchExecutionPlan(request.plan, request.deepSearch, requestedCount, MAX_COUNT);
 
     const params = new URLSearchParams();
     params.set('q', query);
-    params.set('count', String(count));
+    params.set('count', String(executionPlan.providerCount));
     params.set('safesearch', request.safeMode ? 'strict' : 'off');
 
     if (typeof request.offset === 'number' && request.offset >= 0) {
@@ -67,7 +71,7 @@ export class SearchService {
       params.set('search_lang', request.searchLang.toLowerCase());
     }
 
-    const response = await fetch(`${BRAVE_SEARCH_ENDPOINT}?${params.toString()}`, {
+    const response = await this.fetchImpl(`${BRAVE_SEARCH_ENDPOINT}?${params.toString()}`, {
       method: 'GET',
       headers: {
         Accept: 'application/json',
@@ -117,6 +121,7 @@ export class SearchService {
     }
 
     const rerankedResults = rerankSearchResults(query, results, { safeMode: request.safeMode });
+    const returnedResults = rerankedResults.slice(0, requestedCount);
     const sources = rerankedResults.slice(0, 3).map((result) => ({
       title: result.title,
       url: result.url,
@@ -125,7 +130,7 @@ export class SearchService {
       safeMode: request.safeMode,
     });
     const rankingAudit = buildRankingAudit(query, results, { safeMode: request.safeMode });
-    const capabilities = buildSearchCapabilities(request.plan, request.deepSearch);
+    const capabilities = buildSearchCapabilities(request.plan, request.deepSearch, executionPlan.deepSearchApplied);
 
     return {
       query: payload.query?.original ?? query,
@@ -133,13 +138,13 @@ export class SearchService {
       summary: null,
       summaryError: null,
       sources,
-      results: rerankedResults,
+      results: returnedResults,
       retrievedCount: evidenceSelection.retrievedCount,
       selectedCount: evidenceSelection.selectedCount,
       selectedEvidence: evidenceSelection.selectedEvidence,
       rankingAudit,
       capabilities,
-      moreResultsAvailable: payload.web?.more_results_available,
+      moreResultsAvailable: payload.web?.more_results_available ?? rerankedResults.length > requestedCount,
     };
   }
 }

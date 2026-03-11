@@ -5,6 +5,14 @@ export interface SearchPlanFeatures {
   deepSearchAvailable: boolean;
 }
 
+export interface SearchExecutionPlan {
+  features: SearchPlanFeatures;
+  deepSearchRequested: boolean;
+  deepSearchAllowed: boolean;
+  deepSearchApplied: boolean;
+  providerCount: number;
+}
+
 const PLAN_FEATURES: Record<SearchPlanDto, SearchPlanFeatures> = {
   free: {
     plan: 'free',
@@ -23,6 +31,7 @@ export function resolveSearchPlanFeatures(plan: SearchPlanDto): SearchPlanFeatur
 export function buildSearchCapabilities(
   plan: SearchPlanDto,
   deepSearchRequested: boolean,
+  deepSearchApplied = false,
 ): SearchCapabilitiesDto {
   const features = resolveSearchPlanFeatures(plan);
   const deepSearchAllowed = features.deepSearchAvailable;
@@ -31,7 +40,28 @@ export function buildSearchCapabilities(
     plan: features.plan,
     deepSearchRequested,
     deepSearchAllowed,
-    // Phase 1 only wires the contract; retrieval behavior remains unchanged until phase 2.
-    deepSearchApplied: false,
+    deepSearchApplied,
+  };
+}
+
+export function resolveSearchExecutionPlan(
+  plan: SearchPlanDto,
+  deepSearchRequested: boolean,
+  requestedCount: number,
+  maxProviderCount: number,
+): SearchExecutionPlan {
+  const features = resolveSearchPlanFeatures(plan);
+  const deepSearchAllowed = features.deepSearchAvailable;
+  const deepSearchApplied = deepSearchRequested && deepSearchAllowed;
+  const providerCount = deepSearchApplied
+    ? Math.min(maxProviderCount, Math.max(requestedCount * 2, requestedCount + 6))
+    : requestedCount;
+
+  return {
+    features,
+    deepSearchRequested,
+    deepSearchAllowed,
+    deepSearchApplied,
+    providerCount,
   };
 }

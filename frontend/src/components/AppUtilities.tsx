@@ -7,11 +7,17 @@ export interface SearchHistoryEntry {
 }
 
 export type ThemePreference = 'system' | 'light' | 'dark';
+export type PlanPreference = 'free' | 'pro';
 
 interface AppUtilitiesProps {
   historyItems: SearchHistoryEntry[];
   onRunHistory: (query: string) => void;
   onClearHistory: () => void;
+  plan: PlanPreference;
+  onPlanChange: (plan: PlanPreference) => void;
+  deepSearchEnabled: boolean;
+  onDeepSearchChange: (enabled: boolean) => void;
+  freeSearchesRemaining: number | null;
   safeMode: boolean;
   onSafeModeChange: (safeMode: boolean) => void;
   themePreference: ThemePreference;
@@ -120,6 +126,11 @@ export function AppUtilities({
   historyItems,
   onRunHistory,
   onClearHistory,
+  plan,
+  onPlanChange,
+  deepSearchEnabled,
+  onDeepSearchChange,
+  freeSearchesRemaining,
   safeMode,
   onSafeModeChange,
   themePreference,
@@ -223,21 +234,80 @@ export function AppUtilities({
                     </div>
                   </div>
                   <div className="settings-menu-section">
+                    <p className="settings-menu-label">Plan</p>
+                    <div className="stack settings-menu-copy">
+                      <div className="settings-theme-control" role="group" aria-label="Plan">
+                        {(['free', 'pro'] as const).map((option) => (
+                          <button
+                            key={option}
+                            type="button"
+                            className={`settings-theme-option${plan === option ? ' is-active' : ''}`}
+                            aria-pressed={plan === option}
+                            onClick={() => onPlanChange(option)}
+                          >
+                            {option === 'free' ? 'Free' : 'Pro'}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="settings-menu-help">
+                        Local plan state for now. Pro unlocks deep search before billing is added.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="settings-menu-section">
                     <p className="settings-menu-label">Search</p>
-                    <div className="settings-menu-row">
-                      <span className="settings-menu-value">Safe search</span>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={safeMode}
-                        aria-label={`Safe search ${safeMode ? 'on' : 'off'}`}
-                        className={`settings-switch${safeMode ? ' is-active' : ''}`}
-                        onClick={() => onSafeModeChange(!safeMode)}
-                      >
-                        <span className="settings-switch-track" aria-hidden="true">
-                          <span className="settings-switch-thumb" />
-                        </span>
-                      </button>
+                    <div className="stack settings-menu-copy">
+                      <div className="settings-menu-row">
+                        <span className="settings-menu-value">Safe search</span>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={safeMode}
+                          aria-label={`Safe search ${safeMode ? 'on' : 'off'}`}
+                          className={`settings-switch${safeMode ? ' is-active' : ''}`}
+                          onClick={() => onSafeModeChange(!safeMode)}
+                        >
+                          <span className="settings-switch-track" aria-hidden="true">
+                            <span className="settings-switch-thumb" />
+                          </span>
+                        </button>
+                      </div>
+                      <p className="settings-menu-help">Filters sensitive or lower-trust results.</p>
+                      <div className="settings-menu-row">
+                        <span className="settings-menu-value">Deep search</span>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={plan === 'pro' ? deepSearchEnabled : false}
+                          aria-label={
+                            plan === 'pro'
+                              ? `Deep search ${deepSearchEnabled ? 'on' : 'off'}`
+                              : 'Deep search available on Pro'
+                          }
+                          className={`settings-switch${deepSearchEnabled && plan === 'pro' ? ' is-active' : ''}`}
+                          disabled={plan !== 'pro'}
+                          onClick={() => {
+                            if (plan !== 'pro') {
+                              return;
+                            }
+                            onDeepSearchChange(!deepSearchEnabled);
+                          }}
+                        >
+                          <span className="settings-switch-track" aria-hidden="true">
+                            <span className="settings-switch-thumb" />
+                          </span>
+                        </button>
+                      </div>
+                      <p className="settings-menu-help">
+                        {plan === 'pro'
+                          ? 'Extends retrieval depth before reranking.'
+                          : 'Upgrade to Pro to enable deeper retrieval.'}
+                      </p>
+                      {plan === 'free' ? (
+                        <p className="settings-menu-help">
+                          {freeSearchesRemaining} free search{freeSearchesRemaining === 1 ? '' : 'es'} left today.
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                   <div className="settings-menu-section">

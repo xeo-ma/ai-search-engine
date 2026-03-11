@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { AppUtilities, type SearchHistoryEntry, type ThemePreference } from '../components/AppUtilities';
+import {
+  AppUtilities,
+  type PlanPreference,
+  type SearchHistoryEntry,
+  type ThemePreference,
+} from '../components/AppUtilities';
 import { DefinitionCard } from '../components/DefinitionCard';
 import { ErrorState } from '../components/ErrorState';
 import { ResultList } from '../components/ResultList';
@@ -33,8 +38,10 @@ const PAGE_SIZE = 10;
 const SEARCH_HISTORY_STORAGE_KEY = 'ai-search-history';
 const SAFE_MODE_STORAGE_KEY = 'ai-search-safe-mode';
 const THEME_PREFERENCE_STORAGE_KEY = 'ai-search-theme';
-const SEARCH_PLAN: SearchRequest['plan'] = 'free';
-const DEFAULT_DEEP_SEARCH = false;
+const PLAN_PREFERENCE_STORAGE_KEY = 'ai-search-plan';
+const DEEP_SEARCH_STORAGE_KEY = 'ai-search-deep-search';
+const FREE_PLAN_USAGE_STORAGE_KEY = 'ai-search-free-usage';
+const FREE_PLAN_DAILY_SEARCH_LIMIT = 25;
 const MAX_SEARCH_HISTORY_ITEMS = 24;
 const LETTERS_ONLY_PATTERN = /^[a-zA-Z]+$/;
 const MIN_DEFINITION_WORD_LENGTH = 2;
@@ -124,6 +131,54 @@ function readStoredThemePreference(): ThemePreference {
 
   const value = window.localStorage.getItem(THEME_PREFERENCE_STORAGE_KEY);
   return value === 'light' || value === 'dark' || value === 'system' ? value : 'system';
+}
+
+function readStoredPlanPreference(): PlanPreference {
+  if (typeof window === 'undefined') {
+    return 'free';
+  }
+
+  const value = window.localStorage.getItem(PLAN_PREFERENCE_STORAGE_KEY);
+  return value === 'pro' ? 'pro' : 'free';
+}
+
+function readStoredDeepSearch(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  try {
+    return window.localStorage.getItem(DEEP_SEARCH_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function getUsageDayKey(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function readStoredFreePlanUsageCount(): number {
+  if (typeof window === 'undefined') {
+    return 0;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(FREE_PLAN_USAGE_STORAGE_KEY);
+    if (!raw) {
+      return 0;
+    }
+
+    const parsed = JSON.parse(raw) as { day?: string; count?: number };
+    if (!parsed || parsed.day !== getUsageDayKey() || typeof parsed.count !== 'number' || parsed.count < 0) {
+      return 0;
+    }
+
+    return Math.trunc(parsed.count);
+  } catch {
+    return 0;
+  }
 }
 
 function readStoredSafeMode(): boolean {
@@ -354,6 +409,7 @@ export default function SearchPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [summaryStatus, setSummaryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [searchGateMessage, setSearchGateMessage] = useState<string | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [definition, setDefinition] = useState<DefinitionResponse | null>(null);
   const [definitionLoading, setDefinitionLoading] = useState(false);
@@ -363,6 +419,9 @@ export default function SearchPage() {
   const [searchLatencyMs, setSearchLatencyMs] = useState<number | null>(null);
   const [summaryLatencyMs, setSummaryLatencyMs] = useState<number | null>(null);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
+  const [plan, setPlan] = useState<PlanPreference>('free');
+  const [deepSearchEnabled, setDeepSearchEnabled] = useState(false);
+  const [freePlanUsageCount, setFreePlanUsageCount] = useState(0);
   const [safeMode, setSafeMode] = useState(true);
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
   const activeSearchIdRef = useRef(0);
@@ -371,6 +430,7 @@ export default function SearchPage() {
   const searchHeaderRef = useRef<HTMLElement | null>(null);
   const hasLoadedResults = isResultsView && !resultsLoading && !error;
   const refineChips = buildRefineQueryChips(submittedQuery);
+  const freeSearchesRemaining = Math.max(0, FREE_PLAN_DAILY_SEARCH_LIMIT - freePlanUsageCount);
 
   function handleSafeModeChange(nextSafeMode: boolean): void {
     setSafeMode(nextSafeMode);
@@ -379,18 +439,67 @@ export default function SearchPage() {
       return;
     }
 
-    void onSearch(submittedQuery, { replaceUrl: true, safeModeOverride: nextSafeMode });
+    void onSearch(submittedQuery, { replaceUrl: true, safeModeOverride: nextSafeMode, countUsage: false });
+  }
+
+  function handlePlanChange(nextPlan: PlanPreference): void {
+    setPlan(nextPlan);
+    const nextDeepSearchEnabled = nextPlan === 'pro' ? deepSearchEnabled : false;
+    if (nextPlan !== 'pro') {
+      setDeepSearchEnabled(false);
+    }
+
+    if (!submittedQuery) {
+      return;
+    }
+
+    void onSearch(submittedQuery, {
+      replaceUrl: true,
+      planOverride: nextPlan,
+      deepSearchOverride: nextDeepSearchEnabled,
+      countUsage: false,
+    });
+  }
+
+  function handleDeepSearchChange(nextDeepSearchEnabled: boolean): void {
+    setDeepSearchEnabled(nextDeepSearchEnabled);
+
+    if (!submittedQuery) {
+      return;
+    }
+
+    void onSearch(submittedQuery, {
+      replaceUrl: true,
+      deepSearchOverride: nextDeepSearchEnabled,
+      countUsage: false,
+    });
   }
 
   async function onSearch(
     nextQuery?: string,
-    options: { updateUrl?: boolean; replaceUrl?: boolean; safeModeOverride?: boolean } = {},
+    options: {
+      updateUrl?: boolean;
+      replaceUrl?: boolean;
+      safeModeOverride?: boolean;
+      planOverride?: PlanPreference;
+      deepSearchOverride?: boolean;
+      countUsage?: boolean;
+    } = {},
   ): Promise<void> {
     const trimmedQuery = (nextQuery ?? query).trim();
     if (!trimmedQuery) {
       return;
     }
     const requestedSafeMode = options.safeModeOverride ?? safeMode;
+    const requestedPlan = options.planOverride ?? plan;
+    const requestedDeepSearch = requestedPlan === 'pro' ? (options.deepSearchOverride ?? deepSearchEnabled) : false;
+    const shouldCountUsage = options.countUsage ?? true;
+
+    if (requestedPlan === 'free' && shouldCountUsage && freeSearchesRemaining <= 0) {
+      setSearchGateMessage('Free plan limit reached for today. Switch to Pro in settings to keep searching.');
+      setLoadMoreError(null);
+      return;
+    }
 
     if (options.updateUrl !== false && typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -409,6 +518,7 @@ export default function SearchPage() {
     setIsResultsView(true);
     setSubmittedQuery(trimmedQuery);
     setError(null);
+    setSearchGateMessage(null);
     setLoadMoreError(null);
     setDefinition(null);
     setDefinitionLoading(false);
@@ -440,8 +550,8 @@ export default function SearchPage() {
       const data = await searchApi({
         query: trimmedQuery,
         safeMode: requestedSafeMode,
-        plan: SEARCH_PLAN,
-        deepSearch: DEFAULT_DEEP_SEARCH,
+        plan: requestedPlan,
+        deepSearch: requestedDeepSearch,
         count: PAGE_SIZE,
         offset: 0,
       });
@@ -459,6 +569,9 @@ export default function SearchPage() {
       setResultsLoading(false);
       setNextPageOffset(1);
       setHasMoreResults(data.moreResultsAvailable ?? data.results.length === PAGE_SIZE);
+      if (requestedPlan === 'free' && shouldCountUsage) {
+        setFreePlanUsageCount((previous) => previous + 1);
+      }
 
       if (data.results.length === 0) {
         setSummaryStatus('idle');
@@ -546,6 +659,9 @@ export default function SearchPage() {
 
   useEffect(() => {
     setSearchHistory(readStoredHistory());
+    setPlan(readStoredPlanPreference());
+    setDeepSearchEnabled(readStoredDeepSearch());
+    setFreePlanUsageCount(readStoredFreePlanUsageCount());
     setSafeMode(readStoredSafeMode());
     setThemePreference(readStoredThemePreference());
     hasLoadedHistoryRef.current = true;
@@ -558,6 +674,33 @@ export default function SearchPage() {
 
     window.localStorage.setItem(SEARCH_HISTORY_STORAGE_KEY, JSON.stringify(searchHistory));
   }, [searchHistory]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(PLAN_PREFERENCE_STORAGE_KEY, plan);
+  }, [plan]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(DEEP_SEARCH_STORAGE_KEY, String(deepSearchEnabled && plan === 'pro'));
+  }, [deepSearchEnabled, plan]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(
+      FREE_PLAN_USAGE_STORAGE_KEY,
+      JSON.stringify({ day: getUsageDayKey(), count: freePlanUsageCount }),
+    );
+  }, [freePlanUsageCount]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -656,8 +799,8 @@ export default function SearchPage() {
       const data = await searchApi({
         query: submittedQuery,
         safeMode,
-        plan: SEARCH_PLAN,
-        deepSearch: DEFAULT_DEEP_SEARCH,
+        plan,
+        deepSearch: plan === 'pro' ? deepSearchEnabled : false,
         count: PAGE_SIZE,
         offset: nextPageOffset,
       });
@@ -713,6 +856,11 @@ export default function SearchPage() {
               onClearHistory={() => {
                 setSearchHistory([]);
               }}
+              plan={plan}
+              onPlanChange={handlePlanChange}
+              deepSearchEnabled={deepSearchEnabled}
+              onDeepSearchChange={handleDeepSearchChange}
+              freeSearchesRemaining={freeSearchesRemaining}
               safeMode={safeMode}
               onSafeModeChange={handleSafeModeChange}
               themePreference={themePreference}
@@ -730,6 +878,7 @@ export default function SearchPage() {
               loading={resultsLoading}
               placeholder="Ask anything..."
             />
+            {searchGateMessage ? <p className="error">{searchGateMessage}</p> : null}
             <div className="landing-suggestion-block stack">
               <p className="landing-suggestion-label">Try a grounded query</p>
               <div className="landing-suggestion-chips" aria-label="Suggested example searches">
@@ -761,6 +910,11 @@ export default function SearchPage() {
             onClearHistory={() => {
               setSearchHistory([]);
             }}
+            plan={plan}
+            onPlanChange={handlePlanChange}
+            deepSearchEnabled={deepSearchEnabled}
+            onDeepSearchChange={handleDeepSearchChange}
+            freeSearchesRemaining={freeSearchesRemaining}
             safeMode={safeMode}
             onSafeModeChange={handleSafeModeChange}
             themePreference={themePreference}
@@ -774,6 +928,7 @@ export default function SearchPage() {
               loading={resultsLoading}
               compact
             />
+            {searchGateMessage ? <p className="error">{searchGateMessage}</p> : null}
             {refineChips.length > 0 ? (
               <div className="refine-chips" aria-label="Refine query suggestions">
                 {refineChips.map((chip) => (
