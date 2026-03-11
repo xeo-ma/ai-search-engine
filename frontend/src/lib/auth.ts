@@ -6,6 +6,7 @@ import EmailProvider from 'next-auth/providers/email';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
 import { prisma } from './db';
+import { isEmailDeliveryConfigured } from './auth-email';
 
 function buildEmailProvider() {
   const host = process.env.EMAIL_SERVER_HOST;
@@ -14,7 +15,7 @@ function buildEmailProvider() {
   const pass = process.env.EMAIL_SERVER_PASSWORD;
   const from = process.env.EMAIL_FROM;
 
-  if (!host || !port || !user || !pass || !from) {
+  if (!isEmailDeliveryConfigured() || !host || !port || !user || !pass || !from) {
     return null;
   }
 
