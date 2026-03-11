@@ -414,18 +414,42 @@ main {
   gap: 12px;
 }
 
+.settings-menu-row.is-disabled {
+  opacity: 0.5;
+}
+
 .settings-menu-pill {
   display: inline-flex;
   align-items: center;
   min-height: 26px;
   padding: 0 10px;
-  border: 1px solid #dbe5f1;
+  border: 0;
   border-radius: 999px;
-  background: #f8fafc;
-  color: #516177;
+  background: #f1f5f9;
+  color: #475569;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.01em;
+}
+
+.settings-menu-value-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-menu-lock {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #7b8ca3;
+}
+
+.settings-menu-lock svg {
+  width: 14px;
+  height: 14px;
 }
 
 .settings-theme-control {
@@ -491,12 +515,20 @@ main {
 }
 
 .settings-switch.is-active .settings-switch-track {
-  border-color: #3b82f6;
-  background: #dbeafe;
+  border-color: transparent;
+  background: #3b82f6;
 }
 
 .settings-switch.is-active .settings-switch-thumb {
   transform: translateX(18px);
+}
+
+.settings-switch:disabled {
+  cursor: not-allowed;
+}
+
+.settings-switch:disabled .settings-switch-track {
+  border-color: #d5deea;
 }
 
 .settings-switch:hover .settings-switch-track,
@@ -550,6 +582,7 @@ main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   min-height: 38px;
   padding: 0 14px;
   border: 1px solid transparent;
@@ -1035,8 +1068,11 @@ main {
 
 :root[data-theme='dark'] .settings-menu-pill {
   background: #162334;
-  border-color: rgba(255, 255, 255, 0.1);
   color: #d8e1ec;
+}
+
+:root[data-theme='dark'] .settings-menu-lock {
+  color: #8da0b5;
 }
 
 :root[data-theme='dark'] .settings-switch-track {
@@ -1050,8 +1086,8 @@ main {
 }
 
 :root[data-theme='dark'] .settings-switch.is-active .settings-switch-track {
-  border-color: #4f8ee8;
-  background: #1a3556;
+  border-color: transparent;
+  background: #4f8ee8;
 }
 
 :root[data-theme='dark'] .settings-switch:hover .settings-switch-track,
@@ -1059,8 +1095,14 @@ main {
   border-color: #4b647f;
 }
 
+:root[data-theme='dark'] .settings-switch:disabled .settings-switch-track {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: #162334;
+}
+
 :root[data-theme='dark'] .settings-menu-action {
   color: #f87171;
+  font-weight: 500;
 }
 
 :root[data-theme='dark'] .settings-menu-action:hover,

@@ -129,6 +129,15 @@ function EmptyHistoryIcon(): JSX.Element {
   );
 }
 
+function LockIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4.8" y="8.5" width="10.4" height="7.2" rx="1.8" />
+      <path d="M7 8.5V6.8a3 3 0 0 1 6 0v1.7" />
+    </svg>
+  );
+}
+
 export function AppUtilities({
   historyItems,
   onRunHistory,
@@ -337,8 +346,15 @@ export function AppUtilities({
                         </button>
                       </div>
                       <p className="settings-menu-help">Filters sensitive or lower-trust results.</p>
-                      <div className="settings-menu-row">
-                        <span className="settings-menu-value">Deep search</span>
+                      <div className={`settings-menu-row${!deepSearchAvailable ? ' is-disabled' : ''}`}>
+                        <span className="settings-menu-value settings-menu-value-with-icon">
+                          {!deepSearchAvailable ? (
+                            <span className="settings-menu-lock" aria-hidden="true">
+                              <LockIcon />
+                            </span>
+                          ) : null}
+                          <span>Deep search</span>
+                        </span>
                         <button
                           type="button"
                           role="switch"
