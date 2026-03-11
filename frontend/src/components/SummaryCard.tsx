@@ -48,8 +48,8 @@ export function SummaryCard({ summary, sources, claims = [], trace = null }: Sum
       ? 'Hide evidence'
       : 'Show evidence'
     : showEvidence
-      ? 'Hide source basis'
-      : 'Show source basis';
+      ? 'Hide sources'
+      : 'Show sources';
 
   return (
     <section className="card stack">
@@ -74,7 +74,7 @@ export function SummaryCard({ summary, sources, claims = [], trace = null }: Sum
       {showEvidence && hasClaims ? <ClaimEvidenceList claims={claims} /> : null}
       {showEvidence && hasEvidenceFallback ? (
         <section className="stack fallback-evidence-panel" aria-label="Evidence sources">
-          <p className="claim-label">Key sources behind this summary</p>
+          <p className="source-grounding-label">Key sources behind this summary</p>
           <div className="evidence-list stack">
             {sources.slice(0, 3).map((source) => (
               <EvidenceItem key={source.url} source={source} />

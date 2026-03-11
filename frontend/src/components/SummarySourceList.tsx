@@ -57,7 +57,8 @@ export function SummarySourceList({ sources }: SummarySourceListProps) {
                 width={16}
                 height={16}
                 className="result-favicon summary-source-favicon"
-                loading="lazy"
+                loading="eager"
+                fetchPriority="high"
                 decoding="async"
                 referrerPolicy="no-referrer"
                 onError={(event) => {

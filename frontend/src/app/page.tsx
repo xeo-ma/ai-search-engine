@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { AppUtilities, type SearchHistoryEntry } from '../components/AppUtilities';
 import { DefinitionCard } from '../components/DefinitionCard';
 import { ErrorState } from '../components/ErrorState';
 import { ResultList } from '../components/ResultList';
@@ -28,6 +29,8 @@ const EMPTY_RESPONSE: SearchResponse = {
   results: [],
 };
 const PAGE_SIZE = 10;
+const SEARCH_HISTORY_STORAGE_KEY = 'ai-search-history';
+const MAX_SEARCH_HISTORY_ITEMS = 24;
 const LETTERS_ONLY_PATTERN = /^[a-zA-Z]+$/;
 const MIN_DEFINITION_WORD_LENGTH = 2;
 const ACRONYM_PRIORITY_QUERIES = new Set(['ai']);
@@ -60,6 +63,53 @@ function appendUniqueResults(existing: SearchItem[], incoming: SearchItem[]): Se
   }
 
   return merged;
+}
+
+function mergeSearchHistory(existing: SearchHistoryEntry[], query: string): SearchHistoryEntry[] {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) {
+    return existing;
+  }
+
+  const nextEntry: SearchHistoryEntry = {
+    id: `${Date.now()}-${normalizedQuery.toLowerCase()}`,
+    query: normalizedQuery,
+    lastSearchedAt: new Date().toISOString(),
+  };
+
+  return [
+    nextEntry,
+    ...existing.filter((entry) => entry.query.trim().toLowerCase() !== normalizedQuery.toLowerCase()),
+  ].slice(0, MAX_SEARCH_HISTORY_ITEMS);
+}
+
+function readStoredHistory(): SearchHistoryEntry[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(SEARCH_HISTORY_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw) as SearchHistoryEntry[];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter((item): item is SearchHistoryEntry => {
+      return Boolean(
+        item &&
+          typeof item.id === 'string' &&
+          typeof item.query === 'string' &&
+          typeof item.lastSearchedAt === 'string',
+      );
+    });
+  } catch {
+    return [];
+  }
 }
 
 function withRetryHint(message: string): string {
@@ -256,6 +306,7 @@ export default function SearchPage() {
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [isResultsView, setIsResultsView] = useState(false);
+  const [showStickySearch, setShowStickySearch] = useState(false);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [summaryStatus, setSummaryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -268,8 +319,11 @@ export default function SearchPage() {
   const [response, setResponse] = useState<SearchResponse>(EMPTY_RESPONSE);
   const [searchLatencyMs, setSearchLatencyMs] = useState<number | null>(null);
   const [summaryLatencyMs, setSummaryLatencyMs] = useState<number | null>(null);
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
   const activeSearchIdRef = useRef(0);
   const hasInitializedFromUrlRef = useRef(false);
+  const hasLoadedHistoryRef = useRef(false);
+  const searchHeaderRef = useRef<HTMLElement | null>(null);
   const hasLoadedResults = isResultsView && !resultsLoading && !error;
   const refineChips = buildRefineQueryChips(submittedQuery);
 
@@ -295,6 +349,7 @@ export default function SearchPage() {
     activeSearchIdRef.current = searchId;
 
     setQuery(trimmedQuery);
+    setSearchHistory((previous) => mergeSearchHistory(previous, trimmedQuery));
     setIsResultsView(true);
     setSubmittedQuery(trimmedQuery);
     setError(null);
@@ -408,6 +463,19 @@ export default function SearchPage() {
     : null;
 
   useEffect(() => {
+    setSearchHistory(readStoredHistory());
+    hasLoadedHistoryRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedHistoryRef.current || typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(SEARCH_HISTORY_STORAGE_KEY, JSON.stringify(searchHistory));
+  }, [searchHistory]);
+
+  useEffect(() => {
     if (hasInitializedFromUrlRef.current || typeof window === 'undefined') {
       return;
     }
@@ -422,6 +490,35 @@ export default function SearchPage() {
     setQuery(queryFromUrl);
     void onSearch(queryFromUrl, { updateUrl: false });
   }, []);
+
+  useEffect(() => {
+    if (!isResultsView || typeof window === 'undefined') {
+      setShowStickySearch(false);
+      return;
+    }
+
+    const header = searchHeaderRef.current;
+    if (!header) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowStickySearch(!(entry?.isIntersecting ?? true));
+      },
+      {
+        root: null,
+        threshold: 0,
+        rootMargin: '-12px 0px 0px 0px',
+      },
+    );
+
+    observer.observe(header);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isResultsView]);
 
   async function onLoadMore(): Promise<void> {
     if (!submittedQuery || !hasMoreResults || isLoadingMore || resultsLoading) {
@@ -466,9 +563,31 @@ export default function SearchPage() {
 
   return (
     <main className={isResultsView ? 'stack results-layout' : 'stack landing-layout'}>
+      {isResultsView && showStickySearch ? (
+        <div className="sticky-search-shell" role="search" aria-label="Sticky search">
+          <div className="sticky-search-bar">
+            <SearchBar
+              value={query}
+              onChange={setQuery}
+              onSubmit={onSearch}
+              loading={resultsLoading}
+              compact
+            />
+          </div>
+        </div>
+      ) : null}
       {!isResultsView ? (
         <section className="landing-search">
           <div className="landing-hero stack">
+            <AppUtilities
+              historyItems={searchHistory}
+              onRunHistory={(historyQuery) => {
+                void onSearch(historyQuery);
+              }}
+              onClearHistory={() => {
+                setSearchHistory([]);
+              }}
+            />
             <p className="landing-eyebrow">Verifiable search engine</p>
             <div className="stack landing-copy">
               <h1>Search with evidence</h1>
@@ -503,7 +622,16 @@ export default function SearchPage() {
         </section>
       ) : (
         <>
-          <section className="card stack search-header-card">
+          <AppUtilities
+            historyItems={searchHistory}
+            onRunHistory={(historyQuery) => {
+              void onSearch(historyQuery);
+            }}
+            onClearHistory={() => {
+              setSearchHistory([]);
+            }}
+          />
+          <section ref={searchHeaderRef} className="card stack search-header-card">
             <SearchBar
               value={query}
               onChange={setQuery}
@@ -579,14 +707,16 @@ export default function SearchPage() {
             </section>
           ) : null}
 
-          {hasLoadedResults ? <ResultList results={response.results} query={submittedQuery} /> : null}
-
-          {hasLoadedResults && response.results.length > 0 ? (
-            <section className="row load-more-row">
-              <button type="button" onClick={onLoadMore} disabled={!hasMoreResults || isLoadingMore}>
-                {isLoadingMore ? 'Loading more...' : 'Load more results'}
-              </button>
-            </section>
+          {hasLoadedResults ? (
+            <ResultList
+              results={response.results}
+              query={submittedQuery}
+              canLoadMore={response.results.length > 0 && hasMoreResults}
+              onLoadMore={() => {
+                void onLoadMore();
+              }}
+              isLoadingMore={isLoadingMore}
+            />
           ) : null}
 
           {hasLoadedResults && loadMoreError ? <p className="error">{loadMoreError}</p> : null}
