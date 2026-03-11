@@ -10,6 +10,16 @@ interface SignInFormProps {
   callbackUrl: string;
 }
 
+function EyeIcon({ hidden = false }: { hidden?: boolean }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M1.8 10s3-5.2 8.2-5.2 8.2 5.2 8.2 5.2-3 5.2-8.2 5.2S1.8 10 1.8 10Z" />
+      <circle cx="10" cy="10" r="2.5" />
+      {hidden ? <path d="M3.2 16.8 16.8 3.2" /> : null}
+    </svg>
+  );
+}
+
 export function SignInForm({ callbackUrl }: SignInFormProps) {
   const [mode, setMode] = useState<SignInMode>('password');
   const [email, setEmail] = useState('');
@@ -132,7 +142,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
                 aria-pressed={showPassword}
                 onClick={() => setShowPassword((current) => !current)}
               >
-                {showPassword ? 'Hide' : 'Show'}
+                <EyeIcon hidden={showPassword} />
               </button>
             </span>
           </label>

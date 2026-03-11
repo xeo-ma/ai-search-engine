@@ -143,12 +143,18 @@ main {
   color: #607189;
   font-size: 0.92rem;
   font-weight: 600;
+  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
 .auth-mode-toggle-button.is-active {
   background: #ffffff;
   color: var(--text);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.auth-mode-toggle-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.42);
 }
 
 .auth-field {
@@ -188,7 +194,7 @@ main {
 .auth-field input {
   width: 100%;
   min-height: 48px;
-  padding: 0 58px 0 14px;
+  padding: 0 14px;
   border: 1px solid #d5dfec;
   border-radius: 14px;
   background: #ffffff;
@@ -197,10 +203,14 @@ main {
   transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
+.auth-input-shell input {
+  padding-right: 58px;
+}
+
 .auth-field input:focus {
   outline: none;
   border-color: #8ebdf0;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.4);
 }
 
 .auth-field input::placeholder {
@@ -212,19 +222,27 @@ main {
   top: 50%;
   right: 10px;
   transform: translateY(-50%);
+  width: 32px;
+  min-width: 32px;
   min-height: 30px;
-  padding: 0 8px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
   background: transparent;
-  color: #5f6f87;
-  font-size: 0.8rem;
-  font-weight: 600;
+  color: #6282ad;
 }
 
 .auth-input-toggle:hover,
 .auth-input-toggle:focus-visible {
   background: #eef3f9;
   color: #334155;
+}
+
+.auth-input-toggle svg {
+  width: 18px;
+  height: 18px;
 }
 
 .auth-form-hint {
@@ -1064,6 +1082,10 @@ main {
   color: #9db0c4;
 }
 
+:root[data-theme='dark'] .auth-mode-toggle-button:focus-visible {
+  box-shadow: 0 0 0 2px rgba(124, 170, 255, 0.45);
+}
+
 :root[data-theme='dark'] .auth-mode-toggle-button.is-active {
   background: #182432;
   color: var(--text);
@@ -1074,6 +1096,11 @@ main {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
   color: var(--text);
+}
+
+:root[data-theme='dark'] .auth-field input:focus {
+  border-color: #79aefd;
+  box-shadow: 0 0 0 2px rgba(124, 170, 255, 0.3);
 }
 
 :root[data-theme='dark'] .auth-field input::placeholder {

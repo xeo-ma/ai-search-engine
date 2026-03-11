@@ -57,8 +57,6 @@ export function ForgotPasswordForm() {
             required
           />
         </label>
-
-        <p className="auth-form-hint">We’ll email you a secure link to reset your password.</p>
         {errorMessage ? <p className="auth-form-error">{errorMessage}</p> : null}
         {statusMessage ? <p className="auth-form-success">{statusMessage}</p> : null}
 
