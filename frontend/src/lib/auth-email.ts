@@ -24,6 +24,20 @@ export function isEmailDeliveryConfigured(): boolean {
   return getEmailConfig() !== null;
 }
 
+export function getEmailDeliveryDiagnostics() {
+  const rawPort = process.env.EMAIL_SERVER_PORT;
+  const parsedPort = rawPort ? Number(rawPort) : undefined;
+
+  return {
+    hasHost: Boolean(process.env.EMAIL_SERVER_HOST),
+    hasPort: Boolean(rawPort),
+    portIsNumber: typeof parsedPort === 'number' && Number.isFinite(parsedPort),
+    hasUser: Boolean(process.env.EMAIL_SERVER_USER),
+    hasPassword: Boolean(process.env.EMAIL_SERVER_PASSWORD),
+    hasFrom: Boolean(process.env.EMAIL_FROM),
+  };
+}
+
 export async function sendPasswordResetEmail(input: {
   to: string;
   resetUrl: string;
