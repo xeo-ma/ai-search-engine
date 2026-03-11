@@ -171,7 +171,10 @@ export function AppUtilities({ historyItems, onRunHistory, onClearHistory }: App
                 <div className="settings-menu" role="menu" aria-label="Settings menu">
                   <div className="settings-menu-section">
                     <p className="settings-menu-label">Search</p>
-                    <p className="settings-menu-value">Safe search always on</p>
+                    <div className="settings-menu-row">
+                      <span className="settings-menu-value">Safe search</span>
+                      <span className="settings-menu-status">On</span>
+                    </div>
                   </div>
                   <div className="settings-menu-section">
                     <p className="settings-menu-label">Data</p>
@@ -213,7 +216,7 @@ export function AppUtilities({ historyItems, onRunHistory, onClearHistory }: App
                 aria-label="Close search history"
                 onClick={() => setShowHistory(false)}
               >
-                Close
+                <span aria-hidden="true">×</span>
               </button>
             </div>
 
