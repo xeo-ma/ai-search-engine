@@ -140,56 +140,58 @@ export function AppUtilities({ historyItems, onRunHistory, onClearHistory }: App
 
   return (
     <>
-      <div className="page-utility-bar">
-        <div className="page-utility-actions">
-          <button
-            type="button"
-            className="page-utility-button"
-            aria-label="Open search history"
-            onClick={() => {
-              setShowHistory(true);
-              setShowSettings(false);
-            }}
-          >
-            <HistoryIcon />
-          </button>
-          <div className="page-utility-menu-shell" ref={settingsRef}>
+      {!showHistory ? (
+        <div className="page-utility-bar">
+          <div className="page-utility-actions">
             <button
               type="button"
               className="page-utility-button"
-              aria-label="Open settings"
-              aria-expanded={showSettings}
+              aria-label="Open search history"
               onClick={() => {
-                setShowSettings((current) => !current);
-                setShowHistory(false);
+                setShowHistory(true);
+                setShowSettings(false);
               }}
             >
-              <SettingsIcon />
+              <HistoryIcon />
             </button>
-            {showSettings ? (
-              <div className="settings-menu" role="menu" aria-label="Settings menu">
-                <div className="settings-menu-section">
-                  <p className="settings-menu-label">Search</p>
-                  <p className="settings-menu-value">Safe search always on</p>
+            <div className="page-utility-menu-shell" ref={settingsRef}>
+              <button
+                type="button"
+                className="page-utility-button"
+                aria-label="Open settings"
+                aria-expanded={showSettings}
+                onClick={() => {
+                  setShowSettings((current) => !current);
+                  setShowHistory(false);
+                }}
+              >
+                <SettingsIcon />
+              </button>
+              {showSettings ? (
+                <div className="settings-menu" role="menu" aria-label="Settings menu">
+                  <div className="settings-menu-section">
+                    <p className="settings-menu-label">Search</p>
+                    <p className="settings-menu-value">Safe search always on</p>
+                  </div>
+                  <div className="settings-menu-section">
+                    <p className="settings-menu-label">Data</p>
+                    <button
+                      type="button"
+                      className="settings-menu-action"
+                      onClick={() => {
+                        onClearHistory();
+                        setShowSettings(false);
+                      }}
+                    >
+                      Clear local history
+                    </button>
+                  </div>
                 </div>
-                <div className="settings-menu-section">
-                  <p className="settings-menu-label">Data</p>
-                  <button
-                    type="button"
-                    className="settings-menu-action"
-                    onClick={() => {
-                      onClearHistory();
-                      setShowSettings(false);
-                    }}
-                  >
-                    Clear local history
-                  </button>
-                </div>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       {showHistory ? (
         <>
