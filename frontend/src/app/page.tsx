@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { signIn, signOut } from 'next-auth/react';
 
 import { AppUtilities, type PlanPreference, type SearchHistoryEntry, type ThemePreference } from '../components/AppUtilities';
 import { DefinitionCard } from '../components/DefinitionCard';
@@ -14,6 +15,8 @@ import type { SearchItem } from '../lib/api-client';
 import {
   defineApi,
   fetchAccountState,
+  createBillingPortalSession,
+  createCheckoutSession,
   searchApi,
   summarizeApi,
   updateAccountPreferences,
@@ -388,8 +391,8 @@ export default function SearchPage() {
   const planMessage = accountState.authenticated
     ? plan === 'pro'
       ? 'Managed through billing. Deep search eligibility is enforced server-side.'
-      : 'Free plan is enforced from your account entitlement. Upgrade flow lands next.'
-    : 'Signed-out searches use the free experience. Sign in to sync plan and preferences.';
+      : 'Free plan is enforced from your account entitlement. Upgrade to Pro for deeper retrieval.'
+    : 'Signed-out searches use the free experience. Sign in to sync billing and preferences.';
 
   function handleSafeModeChange(nextSafeMode: boolean): void {
     setSafeMode(nextSafeMode);
@@ -424,6 +427,32 @@ export default function SearchPage() {
         countUsage: false,
       });
     })();
+  }
+
+  async function handleSignIn(): Promise<void> {
+    await signIn(undefined, {
+      callbackUrl: typeof window !== 'undefined' ? window.location.href : '/',
+    });
+  }
+
+  async function handleSignOut(): Promise<void> {
+    await signOut({
+      callbackUrl: '/',
+    });
+  }
+
+  async function handleUpgradeToPro(): Promise<void> {
+    const { url } = await createCheckoutSession();
+    if (typeof window !== 'undefined') {
+      window.location.assign(url);
+    }
+  }
+
+  async function handleManageBilling(): Promise<void> {
+    const { url } = await createBillingPortalSession();
+    if (typeof window !== 'undefined') {
+      window.location.assign(url);
+    }
   }
 
   async function onSearch(
@@ -797,10 +826,15 @@ export default function SearchPage() {
               authenticated={accountState.authenticated}
               plan={plan}
               planMessage={planMessage}
+              email={accountState.email}
               deepSearchEnabled={deepSearchEnabled}
               deepSearchAvailable={accountState.deepSearchAvailable}
               onDeepSearchChange={handleDeepSearchChange}
               freeSearchesRemaining={freeSearchesRemaining}
+              onSignIn={handleSignIn}
+              onSignOut={handleSignOut}
+              onUpgradeToPro={handleUpgradeToPro}
+              onManageBilling={handleManageBilling}
               safeMode={safeMode}
               onSafeModeChange={handleSafeModeChange}
               themePreference={themePreference}
@@ -853,10 +887,15 @@ export default function SearchPage() {
               authenticated={accountState.authenticated}
               plan={plan}
               planMessage={planMessage}
+              email={accountState.email}
               deepSearchEnabled={deepSearchEnabled}
               deepSearchAvailable={accountState.deepSearchAvailable}
               onDeepSearchChange={handleDeepSearchChange}
               freeSearchesRemaining={freeSearchesRemaining}
+              onSignIn={handleSignIn}
+              onSignOut={handleSignOut}
+              onUpgradeToPro={handleUpgradeToPro}
+              onManageBilling={handleManageBilling}
               safeMode={safeMode}
             onSafeModeChange={handleSafeModeChange}
             themePreference={themePreference}

@@ -220,6 +220,20 @@ main {
   gap: 12px;
 }
 
+.settings-menu-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid #dbe5f1;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #516177;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
 .settings-theme-control {
   display: inline-flex;
   width: 100%;
@@ -314,6 +328,82 @@ main {
 .settings-menu-action:hover,
 .settings-menu-action:focus-visible {
   color: #b91c1c;
+}
+
+.settings-menu-neutral-action {
+  width: 100%;
+  justify-content: flex-start;
+  min-height: 38px;
+  padding: 0;
+  background: transparent;
+  color: #4b5e76;
+  font-weight: 500;
+  text-align: left;
+}
+
+.settings-menu-neutral-action:hover,
+.settings-menu-neutral-action:focus-visible {
+  color: #2f4158;
+}
+
+.settings-menu-button-row {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.settings-menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 0.87rem;
+  font-weight: 600;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.settings-menu-button:hover:not(:disabled),
+.settings-menu-button:focus-visible:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.settings-menu-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.settings-menu-button-primary {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(30, 93, 190, 0.18);
+}
+
+.settings-menu-button-primary:hover:not(:disabled),
+.settings-menu-button-primary:focus-visible:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.settings-menu-button-secondary {
+  background: #f8fafc;
+  border-color: #dbe5f1;
+  color: #3f5269;
+}
+
+.settings-menu-button-secondary:hover:not(:disabled),
+.settings-menu-button-secondary:focus-visible:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #c9d7e7;
+}
+
+.settings-menu-error {
+  margin: 0;
+  color: #c2410c;
+  font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 .confirm-modal-backdrop {
@@ -701,6 +791,12 @@ main {
   border-top-color: rgba(255, 255, 255, 0.1);
 }
 
+:root[data-theme='dark'] .settings-menu-pill {
+  background: #162334;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #d8e1ec;
+}
+
 :root[data-theme='dark'] .settings-switch-track {
   border-color: #334155;
   background: #162334;
@@ -728,6 +824,42 @@ main {
 :root[data-theme='dark'] .settings-menu-action:hover,
 :root[data-theme='dark'] .settings-menu-action:focus-visible {
   color: #fca5a5;
+}
+
+:root[data-theme='dark'] .settings-menu-neutral-action {
+  color: #b9c7d6;
+}
+
+:root[data-theme='dark'] .settings-menu-neutral-action:hover,
+:root[data-theme='dark'] .settings-menu-neutral-action:focus-visible {
+  color: #eef4fb;
+}
+
+:root[data-theme='dark'] .settings-menu-button-primary {
+  background: #4f8ee8;
+  color: #f8fbff;
+  box-shadow: none;
+}
+
+:root[data-theme='dark'] .settings-menu-button-primary:hover:not(:disabled),
+:root[data-theme='dark'] .settings-menu-button-primary:focus-visible:not(:disabled) {
+  background: #6aa3f0;
+}
+
+:root[data-theme='dark'] .settings-menu-button-secondary {
+  background: #1a2532;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #d8e1ec;
+}
+
+:root[data-theme='dark'] .settings-menu-button-secondary:hover:not(:disabled),
+:root[data-theme='dark'] .settings-menu-button-secondary:focus-visible:not(:disabled) {
+  background: #223041;
+  border-color: #35506d;
+}
+
+:root[data-theme='dark'] .settings-menu-error {
+  color: #fdba74;
 }
 
 :root[data-theme='dark'] .history-drawer-backdrop,

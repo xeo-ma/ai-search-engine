@@ -96,6 +96,8 @@ export interface DefinitionResponse {
 const SEARCH_ENDPOINT = '/api/search';
 const ACCOUNT_ENDPOINT = '/api/account';
 const ACCOUNT_PREFERENCES_ENDPOINT = '/api/account/preferences';
+const BILLING_CHECKOUT_ENDPOINT = '/api/billing/checkout';
+const BILLING_PORTAL_ENDPOINT = '/api/billing/portal';
 const SUMMARIZE_ENDPOINT = '/api/summarize';
 const DEFINE_ENDPOINT = '/api/define';
 const SEARCH_TIMEOUT_MS = 15000;
@@ -199,6 +201,32 @@ export async function updateAccountPreferences(payload: {
   }
 
   return (await response.json()) as AccountStateResponse;
+}
+
+export async function createCheckoutSession(): Promise<{ url: string }> {
+  const response = await fetch(BILLING_CHECKOUT_ENDPOINT, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    const data = (await response.json()) as { message?: string };
+    throw new Error(data.message ?? 'Unable to start checkout.');
+  }
+
+  return (await response.json()) as { url: string };
+}
+
+export async function createBillingPortalSession(): Promise<{ url: string }> {
+  const response = await fetch(BILLING_PORTAL_ENDPOINT, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    const data = (await response.json()) as { message?: string };
+    throw new Error(data.message ?? 'Unable to open billing portal.');
+  }
+
+  return (await response.json()) as { url: string };
 }
 
 export async function summarizeApi(payload: SummarizeRequest): Promise<SummarizeResponse> {

@@ -16,10 +16,15 @@ interface AppUtilitiesProps {
   authenticated: boolean;
   plan: PlanPreference;
   planMessage: string;
+  email: string | null;
   deepSearchEnabled: boolean;
   deepSearchAvailable: boolean;
   onDeepSearchChange: (enabled: boolean) => void;
   freeSearchesRemaining: number | null;
+  onSignIn: () => Promise<void> | void;
+  onSignOut: () => Promise<void> | void;
+  onUpgradeToPro: () => Promise<void> | void;
+  onManageBilling: () => Promise<void> | void;
   safeMode: boolean;
   onSafeModeChange: (safeMode: boolean) => void;
   themePreference: ThemePreference;
@@ -131,10 +136,15 @@ export function AppUtilities({
   authenticated,
   plan,
   planMessage,
+  email,
   deepSearchEnabled,
   deepSearchAvailable,
   onDeepSearchChange,
   freeSearchesRemaining,
+  onSignIn,
+  onSignOut,
+  onUpgradeToPro,
+  onManageBilling,
   safeMode,
   onSafeModeChange,
   themePreference,
@@ -144,6 +154,8 @@ export function AppUtilities({
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showClearHistoryConfirm, setShowClearHistoryConfirm] = useState(false);
+  const [accountActionError, setAccountActionError] = useState<string | null>(null);
+  const [pendingAccountAction, setPendingAccountAction] = useState<null | 'signin' | 'signout' | 'upgrade' | 'billing'>(null);
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const cancelClearHistoryRef = useRef<HTMLButtonElement | null>(null);
   const historyGroups = useMemo(() => groupHistory(historyItems), [historyItems]);
@@ -189,6 +201,23 @@ export function AppUtilities({
 
     cancelClearHistoryRef.current?.focus();
   }, [showClearHistoryConfirm]);
+
+  async function runAccountAction(
+    action: 'signin' | 'signout' | 'upgrade' | 'billing',
+    callback: () => Promise<void> | void,
+  ): Promise<void> {
+    setAccountActionError(null);
+    setPendingAccountAction(action);
+
+    try {
+      await callback();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to complete that action.';
+      setAccountActionError(message);
+    } finally {
+      setPendingAccountAction((current) => (current === action ? null : current));
+    }
+  }
 
   return (
     <>
@@ -240,11 +269,53 @@ export function AppUtilities({
                   <div className="settings-menu-section">
                     <p className="settings-menu-label">Plan</p>
                     <div className="stack settings-menu-copy">
+                      {authenticated && email ? <p className="settings-menu-help">Signed in as {email}</p> : null}
                       <div className="settings-menu-row">
                         <span className="settings-menu-value">Current plan</span>
                         <span className="settings-menu-pill">{plan === 'pro' ? 'Pro' : 'Free'}</span>
                       </div>
                       <p className="settings-menu-help">{planMessage}</p>
+                      {!authenticated ? (
+                        <div className="settings-menu-button-row">
+                          <button
+                            type="button"
+                            className="settings-menu-button settings-menu-button-primary"
+                            disabled={pendingAccountAction !== null}
+                            onClick={() => {
+                              void runAccountAction('signin', onSignIn);
+                            }}
+                          >
+                            {pendingAccountAction === 'signin' ? 'Opening sign in...' : 'Sign in'}
+                          </button>
+                        </div>
+                      ) : plan === 'pro' ? (
+                        <div className="settings-menu-button-row">
+                          <button
+                            type="button"
+                            className="settings-menu-button settings-menu-button-secondary"
+                            disabled={pendingAccountAction !== null}
+                            onClick={() => {
+                              void runAccountAction('billing', onManageBilling);
+                            }}
+                          >
+                            {pendingAccountAction === 'billing' ? 'Opening billing...' : 'Manage billing'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="settings-menu-button-row">
+                          <button
+                            type="button"
+                            className="settings-menu-button settings-menu-button-primary"
+                            disabled={pendingAccountAction !== null}
+                            onClick={() => {
+                              void runAccountAction('upgrade', onUpgradeToPro);
+                            }}
+                          >
+                            {pendingAccountAction === 'upgrade' ? 'Opening checkout...' : 'Upgrade to Pro'}
+                          </button>
+                        </div>
+                      )}
+                      {accountActionError ? <p className="settings-menu-error">{accountActionError}</p> : null}
                     </div>
                   </div>
                   <div className="settings-menu-section">
@@ -309,6 +380,18 @@ export function AppUtilities({
                   </div>
                   <div className="settings-menu-section">
                     <p className="settings-menu-label">Data</p>
+                    {authenticated ? (
+                      <button
+                        type="button"
+                        className="settings-menu-neutral-action"
+                        disabled={pendingAccountAction !== null}
+                        onClick={() => {
+                          void runAccountAction('signout', onSignOut);
+                        }}
+                      >
+                        {pendingAccountAction === 'signout' ? 'Signing out...' : 'Sign out'}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="settings-menu-action"
