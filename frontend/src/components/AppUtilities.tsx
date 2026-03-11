@@ -13,9 +13,11 @@ interface AppUtilitiesProps {
   historyItems: SearchHistoryEntry[];
   onRunHistory: (query: string) => void;
   onClearHistory: () => void;
+  authenticated: boolean;
   plan: PlanPreference;
-  onPlanChange: (plan: PlanPreference) => void;
+  planMessage: string;
   deepSearchEnabled: boolean;
+  deepSearchAvailable: boolean;
   onDeepSearchChange: (enabled: boolean) => void;
   freeSearchesRemaining: number | null;
   safeMode: boolean;
@@ -126,9 +128,11 @@ export function AppUtilities({
   historyItems,
   onRunHistory,
   onClearHistory,
+  authenticated,
   plan,
-  onPlanChange,
+  planMessage,
   deepSearchEnabled,
+  deepSearchAvailable,
   onDeepSearchChange,
   freeSearchesRemaining,
   safeMode,
@@ -236,22 +240,11 @@ export function AppUtilities({
                   <div className="settings-menu-section">
                     <p className="settings-menu-label">Plan</p>
                     <div className="stack settings-menu-copy">
-                      <div className="settings-theme-control" role="group" aria-label="Plan">
-                        {(['free', 'pro'] as const).map((option) => (
-                          <button
-                            key={option}
-                            type="button"
-                            className={`settings-theme-option${plan === option ? ' is-active' : ''}`}
-                            aria-pressed={plan === option}
-                            onClick={() => onPlanChange(option)}
-                          >
-                            {option === 'free' ? 'Free' : 'Pro'}
-                          </button>
-                        ))}
+                      <div className="settings-menu-row">
+                        <span className="settings-menu-value">Current plan</span>
+                        <span className="settings-menu-pill">{plan === 'pro' ? 'Pro' : 'Free'}</span>
                       </div>
-                      <p className="settings-menu-help">
-                        Local plan state for now. Pro unlocks deep search before billing is added.
-                      </p>
+                      <p className="settings-menu-help">{planMessage}</p>
                     </div>
                   </div>
                   <div className="settings-menu-section">
@@ -278,16 +271,18 @@ export function AppUtilities({
                         <button
                           type="button"
                           role="switch"
-                          aria-checked={plan === 'pro' ? deepSearchEnabled : false}
+                          aria-checked={deepSearchAvailable ? deepSearchEnabled : false}
                           aria-label={
-                            plan === 'pro'
+                            deepSearchAvailable
                               ? `Deep search ${deepSearchEnabled ? 'on' : 'off'}`
-                              : 'Deep search available on Pro'
+                              : authenticated
+                                ? 'Deep search available on Pro'
+                                : 'Sign in to access Pro features'
                           }
-                          className={`settings-switch${deepSearchEnabled && plan === 'pro' ? ' is-active' : ''}`}
-                          disabled={plan !== 'pro'}
+                          className={`settings-switch${deepSearchEnabled && deepSearchAvailable ? ' is-active' : ''}`}
+                          disabled={!deepSearchAvailable}
                           onClick={() => {
-                            if (plan !== 'pro') {
+                            if (!deepSearchAvailable) {
                               return;
                             }
                             onDeepSearchChange(!deepSearchEnabled);
@@ -299,11 +294,13 @@ export function AppUtilities({
                         </button>
                       </div>
                       <p className="settings-menu-help">
-                        {plan === 'pro'
+                        {deepSearchAvailable
                           ? 'Extends retrieval depth before reranking.'
-                          : 'Upgrade to Pro to enable deeper retrieval.'}
+                          : authenticated
+                            ? 'Upgrade to Pro to enable deeper retrieval.'
+                            : 'Sign in to sync plan and deep search preferences.'}
                       </p>
-                      {plan === 'free' ? (
+                      {plan === 'free' && freeSearchesRemaining !== null ? (
                         <p className="settings-menu-help">
                           {freeSearchesRemaining} free search{freeSearchesRemaining === 1 ? '' : 'es'} left today.
                         </p>

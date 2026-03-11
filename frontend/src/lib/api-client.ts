@@ -36,6 +36,17 @@ export interface SearchResponse {
   moreResultsAvailable?: boolean;
 }
 
+export interface AccountStateResponse {
+  authenticated: boolean;
+  userId: string | null;
+  email: string | null;
+  plan: 'free' | 'pro';
+  deepSearchAvailable: boolean;
+  deepSearchEnabled: boolean;
+  safeMode: boolean;
+  freeSearchesRemaining: number | null;
+}
+
 export interface SearchRequest {
   query: string;
   safeMode?: boolean;
@@ -83,6 +94,8 @@ export interface DefinitionResponse {
 }
 
 const SEARCH_ENDPOINT = '/api/search';
+const ACCOUNT_ENDPOINT = '/api/account';
+const ACCOUNT_PREFERENCES_ENDPOINT = '/api/account/preferences';
 const SUMMARIZE_ENDPOINT = '/api/summarize';
 const DEFINE_ENDPOINT = '/api/define';
 const SEARCH_TIMEOUT_MS = 15000;
@@ -155,6 +168,37 @@ export async function searchApi(payload: SearchRequest): Promise<SearchResponse>
   }
 
   return (await response.json()) as SearchResponse;
+}
+
+export async function fetchAccountState(): Promise<AccountStateResponse> {
+  const response = await fetch(ACCOUNT_ENDPOINT, {
+    method: 'GET',
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error('Unable to load account state.');
+  }
+
+  return (await response.json()) as AccountStateResponse;
+}
+
+export async function updateAccountPreferences(payload: {
+  deepSearchEnabled?: boolean;
+  safeMode?: boolean;
+}): Promise<AccountStateResponse> {
+  const response = await fetch(ACCOUNT_PREFERENCES_ENDPOINT, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const data = (await response.json()) as { message?: string };
+    throw new Error(data.message ?? 'Unable to update account preferences.');
+  }
+
+  return (await response.json()) as AccountStateResponse;
 }
 
 export async function summarizeApi(payload: SummarizeRequest): Promise<SummarizeResponse> {

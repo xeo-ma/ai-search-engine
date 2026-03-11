@@ -2,12 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import {
-  AppUtilities,
-  type PlanPreference,
-  type SearchHistoryEntry,
-  type ThemePreference,
-} from '../components/AppUtilities';
+import { AppUtilities, type PlanPreference, type SearchHistoryEntry, type ThemePreference } from '../components/AppUtilities';
 import { DefinitionCard } from '../components/DefinitionCard';
 import { ErrorState } from '../components/ErrorState';
 import { ResultList } from '../components/ResultList';
@@ -18,9 +13,11 @@ import { SystemTracePanel, type SystemTraceData } from '../components/SystemTrac
 import type { SearchItem } from '../lib/api-client';
 import {
   defineApi,
+  fetchAccountState,
   searchApi,
   summarizeApi,
-  type SearchRequest,
+  updateAccountPreferences,
+  type AccountStateResponse,
   type DefinitionResponse,
   type SearchResponse,
 } from '../lib/api-client';
@@ -38,10 +35,6 @@ const PAGE_SIZE = 10;
 const SEARCH_HISTORY_STORAGE_KEY = 'ai-search-history';
 const SAFE_MODE_STORAGE_KEY = 'ai-search-safe-mode';
 const THEME_PREFERENCE_STORAGE_KEY = 'ai-search-theme';
-const PLAN_PREFERENCE_STORAGE_KEY = 'ai-search-plan';
-const DEEP_SEARCH_STORAGE_KEY = 'ai-search-deep-search';
-const FREE_PLAN_USAGE_STORAGE_KEY = 'ai-search-free-usage';
-const FREE_PLAN_DAILY_SEARCH_LIMIT = 25;
 const MAX_SEARCH_HISTORY_ITEMS = 24;
 const LETTERS_ONLY_PATTERN = /^[a-zA-Z]+$/;
 const MIN_DEFINITION_WORD_LENGTH = 2;
@@ -131,54 +124,6 @@ function readStoredThemePreference(): ThemePreference {
 
   const value = window.localStorage.getItem(THEME_PREFERENCE_STORAGE_KEY);
   return value === 'light' || value === 'dark' || value === 'system' ? value : 'system';
-}
-
-function readStoredPlanPreference(): PlanPreference {
-  if (typeof window === 'undefined') {
-    return 'free';
-  }
-
-  const value = window.localStorage.getItem(PLAN_PREFERENCE_STORAGE_KEY);
-  return value === 'pro' ? 'pro' : 'free';
-}
-
-function readStoredDeepSearch(): boolean {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  try {
-    return window.localStorage.getItem(DEEP_SEARCH_STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-function getUsageDayKey(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
-
-function readStoredFreePlanUsageCount(): number {
-  if (typeof window === 'undefined') {
-    return 0;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(FREE_PLAN_USAGE_STORAGE_KEY);
-    if (!raw) {
-      return 0;
-    }
-
-    const parsed = JSON.parse(raw) as { day?: string; count?: number };
-    if (!parsed || parsed.day !== getUsageDayKey() || typeof parsed.count !== 'number' || parsed.count < 0) {
-      return 0;
-    }
-
-    return Math.trunc(parsed.count);
-  } catch {
-    return 0;
-  }
 }
 
 function readStoredSafeMode(): boolean {
@@ -419,9 +364,16 @@ export default function SearchPage() {
   const [searchLatencyMs, setSearchLatencyMs] = useState<number | null>(null);
   const [summaryLatencyMs, setSummaryLatencyMs] = useState<number | null>(null);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
-  const [plan, setPlan] = useState<PlanPreference>('free');
-  const [deepSearchEnabled, setDeepSearchEnabled] = useState(false);
-  const [freePlanUsageCount, setFreePlanUsageCount] = useState(0);
+  const [accountState, setAccountState] = useState<AccountStateResponse>({
+    authenticated: false,
+    userId: null,
+    email: null,
+    plan: 'free',
+    deepSearchAvailable: false,
+    deepSearchEnabled: false,
+    safeMode: true,
+    freeSearchesRemaining: null,
+  });
   const [safeMode, setSafeMode] = useState(true);
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
   const activeSearchIdRef = useRef(0);
@@ -430,7 +382,14 @@ export default function SearchPage() {
   const searchHeaderRef = useRef<HTMLElement | null>(null);
   const hasLoadedResults = isResultsView && !resultsLoading && !error;
   const refineChips = buildRefineQueryChips(submittedQuery);
-  const freeSearchesRemaining = Math.max(0, FREE_PLAN_DAILY_SEARCH_LIMIT - freePlanUsageCount);
+  const plan: PlanPreference = accountState.plan;
+  const deepSearchEnabled = accountState.deepSearchAvailable ? accountState.deepSearchEnabled : false;
+  const freeSearchesRemaining = accountState.freeSearchesRemaining;
+  const planMessage = accountState.authenticated
+    ? plan === 'pro'
+      ? 'Managed through billing. Deep search eligibility is enforced server-side.'
+      : 'Free plan is enforced from your account entitlement. Upgrade flow lands next.'
+    : 'Signed-out searches use the free experience. Sign in to sync plan and preferences.';
 
   function handleSafeModeChange(nextSafeMode: boolean): void {
     setSafeMode(nextSafeMode);
@@ -442,37 +401,29 @@ export default function SearchPage() {
     void onSearch(submittedQuery, { replaceUrl: true, safeModeOverride: nextSafeMode, countUsage: false });
   }
 
-  function handlePlanChange(nextPlan: PlanPreference): void {
-    setPlan(nextPlan);
-    const nextDeepSearchEnabled = nextPlan === 'pro' ? deepSearchEnabled : false;
-    if (nextPlan !== 'pro') {
-      setDeepSearchEnabled(false);
-    }
-
-    if (!submittedQuery) {
-      return;
-    }
-
-    void onSearch(submittedQuery, {
-      replaceUrl: true,
-      planOverride: nextPlan,
-      deepSearchOverride: nextDeepSearchEnabled,
-      countUsage: false,
-    });
-  }
-
   function handleDeepSearchChange(nextDeepSearchEnabled: boolean): void {
-    setDeepSearchEnabled(nextDeepSearchEnabled);
+    void (async () => {
+      try {
+        const nextAccountState = await updateAccountPreferences({
+          deepSearchEnabled: nextDeepSearchEnabled,
+        });
+        setAccountState(nextAccountState);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unable to update deep search preference';
+        setLoadMoreError(message);
+        return;
+      }
 
-    if (!submittedQuery) {
-      return;
-    }
+      if (!submittedQuery) {
+        return;
+      }
 
-    void onSearch(submittedQuery, {
-      replaceUrl: true,
-      deepSearchOverride: nextDeepSearchEnabled,
-      countUsage: false,
-    });
+      void onSearch(submittedQuery, {
+        replaceUrl: true,
+        deepSearchOverride: nextDeepSearchEnabled,
+        countUsage: false,
+      });
+    })();
   }
 
   async function onSearch(
@@ -481,7 +432,6 @@ export default function SearchPage() {
       updateUrl?: boolean;
       replaceUrl?: boolean;
       safeModeOverride?: boolean;
-      planOverride?: PlanPreference;
       deepSearchOverride?: boolean;
       countUsage?: boolean;
     } = {},
@@ -491,11 +441,11 @@ export default function SearchPage() {
       return;
     }
     const requestedSafeMode = options.safeModeOverride ?? safeMode;
-    const requestedPlan = options.planOverride ?? plan;
-    const requestedDeepSearch = requestedPlan === 'pro' ? (options.deepSearchOverride ?? deepSearchEnabled) : false;
+    const requestedDeepSearch =
+      accountState.deepSearchAvailable && (options.deepSearchOverride ?? deepSearchEnabled) ? true : false;
     const shouldCountUsage = options.countUsage ?? true;
 
-    if (requestedPlan === 'free' && shouldCountUsage && freeSearchesRemaining <= 0) {
+    if (plan === 'free' && shouldCountUsage && freeSearchesRemaining !== null && freeSearchesRemaining <= 0) {
       setSearchGateMessage('Free plan limit reached for today. Switch to Pro in settings to keep searching.');
       setLoadMoreError(null);
       return;
@@ -550,7 +500,7 @@ export default function SearchPage() {
       const data = await searchApi({
         query: trimmedQuery,
         safeMode: requestedSafeMode,
-        plan: requestedPlan,
+        plan,
         deepSearch: requestedDeepSearch,
         count: PAGE_SIZE,
         offset: 0,
@@ -569,8 +519,11 @@ export default function SearchPage() {
       setResultsLoading(false);
       setNextPageOffset(1);
       setHasMoreResults(data.moreResultsAvailable ?? data.results.length === PAGE_SIZE);
-      if (requestedPlan === 'free' && shouldCountUsage) {
-        setFreePlanUsageCount((previous) => previous + 1);
+      if (plan === 'free' && shouldCountUsage && accountState.authenticated && freeSearchesRemaining !== null) {
+        setAccountState((previous) => ({
+          ...previous,
+          freeSearchesRemaining: Math.max(0, (previous.freeSearchesRemaining ?? 0) - 1),
+        }));
       }
 
       if (data.results.length === 0) {
@@ -607,6 +560,12 @@ export default function SearchPage() {
         return;
       }
       const message = err instanceof Error ? err.message : 'Search request failed';
+      if (/free plan limit reached/i.test(message)) {
+        setSearchGateMessage(message);
+        setResultsLoading(false);
+        setSummaryStatus('idle');
+        return;
+      }
       setError(withRetryHint(message));
       setResponse(EMPTY_RESPONSE);
       setResultsLoading(false);
@@ -659,12 +618,18 @@ export default function SearchPage() {
 
   useEffect(() => {
     setSearchHistory(readStoredHistory());
-    setPlan(readStoredPlanPreference());
-    setDeepSearchEnabled(readStoredDeepSearch());
-    setFreePlanUsageCount(readStoredFreePlanUsageCount());
     setSafeMode(readStoredSafeMode());
     setThemePreference(readStoredThemePreference());
     hasLoadedHistoryRef.current = true;
+
+    void (async () => {
+      try {
+        const nextAccountState = await fetchAccountState();
+        setAccountState(nextAccountState);
+      } catch {
+        // Keep the signed-out free fallback if the account route is unavailable.
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -674,33 +639,6 @@ export default function SearchPage() {
 
     window.localStorage.setItem(SEARCH_HISTORY_STORAGE_KEY, JSON.stringify(searchHistory));
   }, [searchHistory]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    window.localStorage.setItem(PLAN_PREFERENCE_STORAGE_KEY, plan);
-  }, [plan]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    window.localStorage.setItem(DEEP_SEARCH_STORAGE_KEY, String(deepSearchEnabled && plan === 'pro'));
-  }, [deepSearchEnabled, plan]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    window.localStorage.setItem(
-      FREE_PLAN_USAGE_STORAGE_KEY,
-      JSON.stringify({ day: getUsageDayKey(), count: freePlanUsageCount }),
-    );
-  }, [freePlanUsageCount]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -800,7 +738,7 @@ export default function SearchPage() {
         query: submittedQuery,
         safeMode,
         plan,
-        deepSearch: plan === 'pro' ? deepSearchEnabled : false,
+        deepSearch: deepSearchEnabled,
         count: PAGE_SIZE,
         offset: nextPageOffset,
       });
@@ -856,9 +794,11 @@ export default function SearchPage() {
               onClearHistory={() => {
                 setSearchHistory([]);
               }}
+              authenticated={accountState.authenticated}
               plan={plan}
-              onPlanChange={handlePlanChange}
+              planMessage={planMessage}
               deepSearchEnabled={deepSearchEnabled}
+              deepSearchAvailable={accountState.deepSearchAvailable}
               onDeepSearchChange={handleDeepSearchChange}
               freeSearchesRemaining={freeSearchesRemaining}
               safeMode={safeMode}
@@ -901,21 +841,23 @@ export default function SearchPage() {
         </section>
       ) : (
         <>
-          <AppUtilities
-            context="results"
-            historyItems={searchHistory}
+            <AppUtilities
+              context="results"
+              historyItems={searchHistory}
             onRunHistory={(historyQuery) => {
               void onSearch(historyQuery);
             }}
-            onClearHistory={() => {
-              setSearchHistory([]);
-            }}
-            plan={plan}
-            onPlanChange={handlePlanChange}
-            deepSearchEnabled={deepSearchEnabled}
-            onDeepSearchChange={handleDeepSearchChange}
-            freeSearchesRemaining={freeSearchesRemaining}
-            safeMode={safeMode}
+              onClearHistory={() => {
+                setSearchHistory([]);
+              }}
+              authenticated={accountState.authenticated}
+              plan={plan}
+              planMessage={planMessage}
+              deepSearchEnabled={deepSearchEnabled}
+              deepSearchAvailable={accountState.deepSearchAvailable}
+              onDeepSearchChange={handleDeepSearchChange}
+              freeSearchesRemaining={freeSearchesRemaining}
+              safeMode={safeMode}
             onSafeModeChange={handleSafeModeChange}
             themePreference={themePreference}
             onThemeChange={setThemePreference}
