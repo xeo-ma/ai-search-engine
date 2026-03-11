@@ -25,12 +25,17 @@ This project is a minimal web search application with an AI summary layer. Users
 - AI-generated summary with source links
 - Summary confidence gate to suppress low-confidence summaries
 - Optional `Show evidence` toggle for claim + evidence expansion
+- Sources visible by default, even when evidence stays collapsed
 - Definition card for definition-style queries
 - Pronunciation playback (OpenAI TTS)
 - Safe-mode-first search behavior
+- `Safe search` setting with real retrieval impact:
+  - Brave provider `safesearch` integration
+  - backend reranking for low-trust, spammy, and sensitive result demotion
 - Incremental result loading via "Load more results"
 - URL query persistence (`/?q=...`) with auto-run on page load
 - Minimal error states (search failure, no results, summary failure)
+- Optional `System trace` panel for compact technical trace details
 
 ## Tech Stack
 - TypeScript
@@ -50,12 +55,30 @@ This project is a minimal web search application with an AI summary layer. Users
 ## Request Flow
 1. User submits a query in the frontend.
 2. Frontend calls its server route (`/api/search`), which forwards to backend `/search`.
-3. Backend fetches and normalizes results from Brave Search, then returns results to the frontend.
+3. Backend fetches and normalizes results from Brave Search, applies safe-search and quality reranking, then returns results to the frontend.
 4. Frontend sends top results to `/api/summarize`, which forwards to backend `/summarize`.
 5. Backend generates summary text plus claim/evidence metadata with OpenAI Responses API; backend applies filtering/ranking heuristics and limits display sources to top 3.
 6. Frontend renders compact AI Summary by default. If claims exist, users can expand `Show evidence` to view claim-grouped evidence rows; when expanded, the bottom Sources list is hidden.
 7. For definition-style queries, frontend also calls `/api/define` and renders a Definition card when data is available.
 8. Pronunciation icon calls `/api/tts`, which forwards to backend `/tts` for OpenAI speech synthesis.
+
+## Safe Search
+- `Safe search` defaults to `On` and is exposed as an advanced setting in the app.
+- `On` combines two layers:
+  - Brave Search `safesearch=strict`
+  - backend reranking that demotes low-trust, spammy, and sensitive-result patterns
+- `Off` broadens provider retrieval (`safesearch=off`) but still keeps backend quality reranking in place.
+- The goal is broader retrieval without letting obvious low-quality sources dominate top results.
+
+## System Trace
+- The `System trace` panel is an optional technical details view, not a raw debug dump.
+- It shows compact retrieval and answer metadata such as:
+  - query and detected intent
+  - expanded queries
+  - retrieval and summary counts
+  - selected sources
+  - latency and claim count
+  - compact ranking audit details for safe-mode/reranking effects
 
 ## Running the Project
 1. Install dependencies:
@@ -114,6 +137,7 @@ Optional:
 - Current caches are in-memory and process-local (not shared across instances).
 - Evidence-to-claim mapping uses deterministic heuristics, not perfect sentence-level citation mapping.
 - Sources list is intentionally hidden while evidence is expanded to reduce duplicate verification UI.
+- `Safe search` policy is heuristic and provider-assisted, not a full custom moderation system.
 
 ## License
 This project is licensed under the MIT License — see the LICENSE file for details.
