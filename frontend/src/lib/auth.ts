@@ -37,7 +37,7 @@ const emailProvider = buildEmailProvider();
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
-    strategy: 'database',
+    strategy: 'jwt',
   },
   providers: [
     CredentialsProvider({
@@ -77,9 +77,16 @@ export const authOptions: NextAuthOptions = {
     ...(emailProvider ? [emailProvider] : []),
   ],
   callbacks: {
-    async session({ session, user }) {
+    async jwt({ token, user }) {
+      if (user?.id) {
+        token.sub = user.id;
+      }
+
+      return token;
+    },
+    async session({ session, token }) {
       if (session.user) {
-        session.user.id = user.id;
+        session.user.id = token.sub ?? '';
       }
       return session;
     },
