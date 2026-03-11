@@ -5,6 +5,10 @@
 - `frontend/` (Next.js 14, React 18): UI rendering, URL query state (`?q=`), and server-side API proxy routes.
 - `backend/` (Fastify + TypeScript): search retrieval, summarization orchestration, source ranking/filtering, and TTS.
 - `shared/` contracts: request/response types shared across app boundaries where needed.
+- `frontend/` also owns auth, billing, and account-state enforcement:
+  - Auth.js
+  - Prisma
+  - Stripe checkout/portal/webhook routes
 
 ## Core backend modules
 
@@ -12,6 +16,14 @@
 - `backend/src/modules/summarization`: summary generation, claim extraction, evidence mapping, source selection, and fallback behavior.
 - `backend/src/modules/tts`: OpenAI TTS integration with in-memory audio cache.
 - `backend/src/modules/cache`: lightweight in-memory cache utility used by search.
+
+## Auth and billing modules
+
+- `frontend/src/lib/auth.ts`: Auth.js configuration, credentials auth, magic-link provider wiring, and session callbacks.
+- `frontend/src/lib/db.ts`: Prisma client.
+- `frontend/src/lib/account-state.ts`: server-side account state, entitlements, preferences, and usage helpers.
+- `frontend/src/app/api/auth/*`: register, forgot-password, reset-password, and Auth.js routes.
+- `frontend/src/app/api/billing/*`: Stripe checkout, billing portal, and webhook routes.
 
 ## Request flow
 
@@ -33,6 +45,22 @@
 7. For definition-style queries, frontend calls `GET /api/define`:
    - provider chain: Dictionary API first, Datamuse fallback.
 8. Pronunciation requests call `GET /api/tts` and stream OpenAI-generated audio.
+
+## Auth and billing flow
+
+1. User signs up or signs in through the Next.js app.
+2. Auth.js resolves the authenticated session in frontend API routes.
+3. `frontend/src/app/api/account/route.ts` resolves effective account state from Prisma:
+   - plan
+   - deep-search availability
+   - deep-search preference
+   - free-plan usage remaining
+4. Search requests remain client-initiated, but plan enforcement is server-authoritative.
+5. Stripe checkout starts from `frontend/src/app/api/billing/checkout/route.ts`.
+6. Stripe webhook updates:
+   - `Subscription`
+   - `Entitlement`
+7. Billing portal access is served by `frontend/src/app/api/billing/portal/route.ts`.
 
 ## Search quality and safe mode
 
@@ -83,3 +111,5 @@ These caches are process-local and are intended for single-instance deployments.
 - Keep AI as a non-blocking enhancement over core results.
 - Keep provider-specific code isolated from route/controller layers.
 - Keep UI minimal and interview-defensible with explicit data flow.
+- Keep plan gating and deep-search enforcement server-authoritative.
+- Keep sources visible by default and evidence optional.

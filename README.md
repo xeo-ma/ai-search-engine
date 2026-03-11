@@ -36,6 +36,15 @@ This project is a minimal web search application with an AI summary layer. Users
 - URL query persistence (`/?q=...`) with auto-run on page load
 - Minimal error states (search failure, no results, summary failure)
 - Optional `System trace` panel for compact technical trace details
+- Auth system with:
+  - email/password sign up and sign in
+  - email magic-link sign in when SMTP is configured
+  - forgot/reset password flows
+- Billing system with:
+  - Stripe Checkout upgrade flow
+  - Stripe Billing Portal access
+  - server-authoritative `free` / `pro` entitlement gating
+  - `Deep search` availability tied to account entitlement
 
 ## Tech Stack
 - TypeScript
@@ -44,6 +53,9 @@ This project is a minimal web search application with an AI summary layer. Users
 - Zod
 - OpenAI Responses API (`gpt-5-mini`)
 - Brave Search API
+- Auth.js
+- Prisma
+- Stripe
 - pnpm
 
 ## Project Structure
@@ -61,6 +73,25 @@ This project is a minimal web search application with an AI summary layer. Users
 6. Frontend renders compact AI Summary by default. If claims exist, users can expand `Show evidence` to view claim-grouped evidence rows; when expanded, the bottom Sources list is hidden.
 7. For definition-style queries, frontend also calls `/api/define` and renders a Definition card when data is available.
 8. Pronunciation icon calls `/api/tts`, which forwards to backend `/tts` for OpenAI speech synthesis.
+
+## Auth and Billing
+- Auth is handled in the Next.js app with Auth.js + Prisma.
+- Supported auth paths:
+  - email/password sign up and sign in
+  - magic-link sign in when SMTP is configured
+  - forgot-password and reset-password via emailed reset links
+- Billing is handled in the Next.js app with Stripe:
+  - `/api/billing/checkout`
+  - `/api/billing/portal`
+  - `/api/billing/webhook`
+- Plan enforcement is server-authoritative:
+  - the client may request `Deep search`
+  - the server decides whether it is allowed and applied based on the authenticated user's entitlement
+
+## Database
+- Prisma now targets PostgreSQL for production use.
+- Neon is the intended hosted database for auth, subscription, entitlement, preference, usage, and password-reset state.
+- Production requires applying the Prisma schema to Neon before auth or billing will work correctly.
 
 ## Safe Search
 - `Safe search` defaults to `On` and is exposed as an advanced setting in the app.
@@ -112,9 +143,26 @@ pnpm eval:summaries
 ## Environment Variables
 Create a `.env` file at the repository root.
 
-Required for backend:
+Required for backend (Render or equivalent):
 - `BRAVE_SEARCH_API_KEY`: Brave Search API key
 - `OPENAI_API_KEY`: OpenAI API key (used for AI summaries and TTS)
+
+Required for frontend app (Vercel or equivalent):
+- `DATABASE_URL`: PostgreSQL connection string (Neon recommended)
+- `AUTH_SECRET`: Auth.js secret
+- `NEXTAUTH_URL`: public app URL used by Auth.js
+- `NEXT_PUBLIC_APP_URL`: public app URL used for billing redirects and reset links
+- `BACKEND_BASE_URL`: backend API base URL
+- `STRIPE_SECRET_KEY`: Stripe secret key
+- `STRIPE_WEBHOOK_SECRET`: Stripe webhook signing secret
+- `STRIPE_PRO_PRICE_ID`: Stripe recurring price ID for the Pro plan
+
+Required for email auth/reset flows:
+- `EMAIL_SERVER_HOST`
+- `EMAIL_SERVER_PORT`
+- `EMAIL_SERVER_USER`
+- `EMAIL_SERVER_PASSWORD`
+- `EMAIL_FROM`
 
 Optional:
 - `HOST`: backend host (default `0.0.0.0`)
@@ -124,20 +172,36 @@ Optional:
 - `OPENAI_TTS_RESPONSE_FORMAT`: TTS output format (default `wav`)
 - `DICTIONARY_API_BASE_URL`: definition provider base URL override
 - `DATAMUSE_API_BASE_URL`: fallback definition provider base URL override
-- `BACKEND_BASE_URL`: frontend server-side proxy target (default `http://localhost:3001`)
 - `NEXT_PUBLIC_API_BASE_URL`: fallback frontend proxy target
+
+## Deployment Notes
+- Recommended production split:
+  - frontend/auth/billing on Vercel
+  - search/summarization backend on Render
+  - PostgreSQL on Neon
+  - transactional email via SMTP provider (for example Postmark)
+- Required production step:
+  - run Prisma schema deployment against the Neon `DATABASE_URL`
+- Required Stripe webhook endpoint:
+  - `https://your-domain.com/api/billing/webhook`
+- Recommended Stripe events:
+  - `checkout.session.completed`
+  - `customer.subscription.updated`
+  - `customer.subscription.deleted`
 
 ## Future Improvements
 - Better provider-level error mapping for user-facing failures
-- End-to-end tests for search + summary flows
+- Live production smoke automation for hosted auth/billing flows
 - Redis-backed cache for multi-instance deployments
 - Additional ranking and source-quality tuning
+- Forgot-password rate limiting and token cleanup
 
 ## Known Limitations
 - Current caches are in-memory and process-local (not shared across instances).
 - Evidence-to-claim mapping uses deterministic heuristics, not perfect sentence-level citation mapping.
 - Sources list is intentionally hidden while evidence is expanded to reduce duplicate verification UI.
 - `Safe search` policy is heuristic and provider-assisted, not a full custom moderation system.
+- Auth and billing are production-capable, but still depend on correct SMTP, Stripe webhook, and deployed env configuration.
 
 ## License
 This project is licensed under the MIT License — see the LICENSE file for details.
