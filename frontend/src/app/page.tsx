@@ -674,6 +674,7 @@ export default function SearchPage() {
         <section className="landing-search">
           <div className="landing-hero stack">
             <AppUtilities
+              context="landing"
               historyItems={searchHistory}
               onRunHistory={(historyQuery) => {
                 void onSearch(historyQuery);
@@ -681,9 +682,9 @@ export default function SearchPage() {
               onClearHistory={() => {
                 setSearchHistory([]);
               }}
-              themePreference={themePreference}
               safeMode={safeMode}
               onSafeModeChange={handleSafeModeChange}
+              themePreference={themePreference}
               onThemeChange={setThemePreference}
             />
             <p className="landing-eyebrow">Verifiable search engine</p>
@@ -721,6 +722,7 @@ export default function SearchPage() {
       ) : (
         <>
           <AppUtilities
+            context="results"
             historyItems={searchHistory}
             onRunHistory={(historyQuery) => {
               void onSearch(historyQuery);
@@ -728,10 +730,10 @@ export default function SearchPage() {
             onClearHistory={() => {
               setSearchHistory([]);
             }}
-            themePreference={themePreference}
-            onThemeChange={setThemePreference}
             safeMode={safeMode}
             onSafeModeChange={handleSafeModeChange}
+            themePreference={themePreference}
+            onThemeChange={setThemePreference}
           />
           <section ref={searchHeaderRef} className="card stack search-header-card">
             <SearchBar
@@ -741,10 +743,6 @@ export default function SearchPage() {
               loading={resultsLoading}
               compact
             />
-            <p className="muted results-for-label">
-              <span>Results for:</span>{' '}
-              <strong className="results-for-query">"{submittedQuery}"</strong>
-            </p>
             {refineChips.length > 0 ? (
               <div className="refine-chips" aria-label="Refine query suggestions">
                 {refineChips.map((chip) => (

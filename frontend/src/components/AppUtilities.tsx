@@ -16,6 +16,7 @@ interface AppUtilitiesProps {
   onSafeModeChange: (safeMode: boolean) => void;
   themePreference: ThemePreference;
   onThemeChange: (theme: ThemePreference) => void;
+  context?: 'landing' | 'results';
 }
 
 interface HistoryGroup {
@@ -119,10 +120,11 @@ export function AppUtilities({
   historyItems,
   onRunHistory,
   onClearHistory,
-  themePreference,
   safeMode,
   onSafeModeChange,
+  themePreference,
   onThemeChange,
+  context = 'landing',
 }: AppUtilitiesProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -176,7 +178,7 @@ export function AppUtilities({
   return (
     <>
       {!showHistory ? (
-        <div className="page-utility-bar">
+        <div className={`page-utility-bar page-utility-bar-${context}`}>
           <div className="page-utility-actions">
             <button
               type="button"
