@@ -12,6 +12,7 @@ export function SignUpForm({ callbackUrl }: SignUpFormProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -93,15 +94,26 @@ export function SignUpForm({ callbackUrl }: SignUpFormProps) {
 
         <label className="auth-field">
           <span>Password</span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="At least 8 characters"
-            required
-            minLength={8}
-          />
+          <span className="auth-input-shell">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="••••••••"
+              required
+              minLength={8}
+            />
+            <button
+              type="button"
+              className="auth-input-toggle"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+              onClick={() => setShowPassword((current) => !current)}
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </span>
         </label>
 
         <p className="auth-form-hint">Passwords must be at least 8 characters long.</p>

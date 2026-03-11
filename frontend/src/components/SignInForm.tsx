@@ -14,6 +14,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
   const [mode, setMode] = useState<SignInMode>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -111,15 +112,29 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
 
         {mode === 'password' ? (
           <label className="auth-field">
-            <span>Password</span>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Enter your password"
-              required
-            />
+            <span className="auth-field-header">
+              <span>Password</span>
+              <Link href="/forgot-password">Forgot password?</Link>
+            </span>
+            <span className="auth-input-shell">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Enter your password"
+                required
+              />
+              <button
+                type="button"
+                className="auth-input-toggle"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((current) => !current)}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </span>
           </label>
         ) : (
           <p className="auth-form-hint">We’ll email you a one-time sign-in link.</p>
@@ -134,8 +149,8 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
       </form>
 
       <div className="auth-inline-links">
-        <Link href="/forgot-password">Forgot password?</Link>
-        <Link href={`/sign-up?callbackUrl=${encodeURIComponent(callbackUrl)}`}>Create account</Link>
+        <span>Don&apos;t have an account?</span>
+        <Link href={`/sign-up?callbackUrl=${encodeURIComponent(callbackUrl)}`}>Create one</Link>
       </div>
     </div>
   );

@@ -68,6 +68,9 @@ main {
 
 .auth-back-link {
   width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: #5b6c84;
   font-size: 0.92rem;
   text-decoration: none;
@@ -158,10 +161,34 @@ main {
   font-weight: 600;
 }
 
+.auth-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auth-field-header a {
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-field-header a:hover,
+.auth-field-header a:focus-visible {
+  text-decoration: underline;
+}
+
+.auth-input-shell {
+  position: relative;
+  display: block;
+}
+
 .auth-field input {
   width: 100%;
   min-height: 48px;
-  padding: 0 14px;
+  padding: 0 58px 0 14px;
   border: 1px solid #d5dfec;
   border-radius: 14px;
   background: #ffffff;
@@ -178,6 +205,26 @@ main {
 
 .auth-field input::placeholder {
   color: #73849a;
+}
+
+.auth-input-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: transparent;
+  color: #5f6f87;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.auth-input-toggle:hover,
+.auth-input-toggle:focus-visible {
+  background: #eef3f9;
+  color: #334155;
 }
 
 .auth-form-hint {
@@ -227,6 +274,7 @@ main {
 .auth-inline-links {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
   color: var(--muted);
   font-size: 0.9rem;
@@ -607,11 +655,6 @@ main {
   background: var(--primary);
   color: #ffffff;
   box-shadow: 0 8px 18px rgba(30, 93, 190, 0.18);
-}
-
-.settings-menu-button-primary:hover:not(:disabled),
-.settings-menu-button-primary:focus-visible:not(:disabled) {
-  background: var(--primary-hover);
 }
 
 .settings-menu-button-secondary {
@@ -1035,6 +1078,20 @@ main {
 
 :root[data-theme='dark'] .auth-field input::placeholder {
   color: #708399;
+}
+
+:root[data-theme='dark'] .auth-field-header a {
+  color: #7fb3ff;
+}
+
+:root[data-theme='dark'] .auth-input-toggle {
+  color: #9db0c4;
+}
+
+:root[data-theme='dark'] .auth-input-toggle:hover,
+:root[data-theme='dark'] .auth-input-toggle:focus-visible {
+  background: #1d2b3b;
+  color: #edf4fb;
 }
 
 :root[data-theme='dark'] .auth-form-error {

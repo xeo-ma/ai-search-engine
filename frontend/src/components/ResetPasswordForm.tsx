@@ -10,6 +10,8 @@ interface ResetPasswordFormProps {
 export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,28 +73,50 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       <form className="auth-form-stack" onSubmit={(event) => void handleSubmit(event)}>
         <label className="auth-field">
           <span>New password</span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="At least 8 characters"
-            required
-            minLength={8}
-          />
+          <span className="auth-input-shell">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="••••••••"
+              required
+              minLength={8}
+            />
+            <button
+              type="button"
+              className="auth-input-toggle"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+              onClick={() => setShowPassword((current) => !current)}
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </span>
         </label>
 
         <label className="auth-field">
           <span>Confirm password</span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-            placeholder="Repeat your new password"
-            required
-            minLength={8}
-          />
+          <span className="auth-input-shell">
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              placeholder="Repeat your new password"
+              required
+              minLength={8}
+            />
+            <button
+              type="button"
+              className="auth-input-toggle"
+              aria-label={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}
+              aria-pressed={showConfirmPassword}
+              onClick={() => setShowConfirmPassword((current) => !current)}
+            >
+              {showConfirmPassword ? 'Hide' : 'Show'}
+            </button>
+          </span>
         </label>
 
         <p className="auth-form-hint">Choose a new password you haven’t used recently.</p>

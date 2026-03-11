@@ -15,7 +15,8 @@ export function AuthShell({ eyebrow, title, description, footer, children }: Aut
       <section className="auth-shell">
         <div className="auth-shell-header">
           <Link className="auth-back-link" href="/">
-            Back to search
+            <span aria-hidden="true">←</span>
+            <span>Back to search</span>
           </Link>
           <p className="auth-eyebrow">{eyebrow}</p>
           <div className="auth-copy">
