@@ -97,6 +97,10 @@ main {
 }
 
 .page-utility-bar {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 20px);
+  right: max(20px, env(safe-area-inset-right, 0px));
+  z-index: 41;
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -131,9 +135,9 @@ main {
 
 .page-utility-button:hover,
 .page-utility-button:focus-visible {
-  background: rgba(255, 255, 255, 0.92);
+  background: #f1f5f9;
   border-color: #c4d4e8;
-  color: var(--text);
+  color: #415168;
   box-shadow: 0 12px 26px rgba(23, 33, 47, 0.09);
   transform: translateY(-1px);
 }
@@ -1178,6 +1182,11 @@ button:disabled {
     min-height: 44px;
   }
 
+  .page-utility-bar {
+    top: calc(env(safe-area-inset-top, 0px) + 14px);
+    right: max(12px, env(safe-area-inset-right, 0px));
+  }
+
   .settings-menu {
     width: min(260px, calc(100vw - 24px));
   }
@@ -1369,7 +1378,8 @@ button:disabled {
   }
 
   .page-utility-bar {
-    margin-bottom: 2px;
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    right: max(10px, env(safe-area-inset-right, 0px));
   }
 
   .history-drawer {
