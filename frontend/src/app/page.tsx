@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { signIn, signOut } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 
 import { AppUtilities, type PlanPreference, type SearchHistoryEntry, type ThemePreference } from '../components/AppUtilities';
 import { DefinitionCard } from '../components/DefinitionCard';
@@ -430,9 +430,8 @@ export default function SearchPage() {
   }
 
   async function handleSignIn(): Promise<void> {
-    await signIn(undefined, {
-      callbackUrl: typeof window !== 'undefined' ? window.location.href : '/',
-    });
+    const callbackUrl = typeof window !== 'undefined' ? window.location.href : '/';
+    window.location.assign(`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }
 
   async function handleSignOut(): Promise<void> {

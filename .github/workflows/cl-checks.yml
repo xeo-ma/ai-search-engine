@@ -33,6 +33,9 @@ jobs:
       - name: Install frontend deps
         run: pnpm --dir frontend install --frozen-lockfile
 
+      - name: Generate frontend Prisma client
+        run: pnpm --dir frontend exec prisma generate
+
       - name: Backend typecheck
         run: pnpm --dir backend typecheck
 
