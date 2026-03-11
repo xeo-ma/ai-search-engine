@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { AppUtilities, type SearchHistoryEntry } from '../components/AppUtilities';
+import { AppUtilities, type SearchHistoryEntry, type ThemePreference } from '../components/AppUtilities';
 import { DefinitionCard } from '../components/DefinitionCard';
 import { ErrorState } from '../components/ErrorState';
 import { ResultList } from '../components/ResultList';
@@ -30,6 +30,7 @@ const EMPTY_RESPONSE: SearchResponse = {
 };
 const PAGE_SIZE = 10;
 const SEARCH_HISTORY_STORAGE_KEY = 'ai-search-history';
+const THEME_PREFERENCE_STORAGE_KEY = 'ai-search-theme';
 const MAX_SEARCH_HISTORY_ITEMS = 24;
 const LETTERS_ONLY_PATTERN = /^[a-zA-Z]+$/;
 const MIN_DEFINITION_WORD_LENGTH = 2;
@@ -110,6 +111,27 @@ function readStoredHistory(): SearchHistoryEntry[] {
   } catch {
     return [];
   }
+}
+
+function readStoredThemePreference(): ThemePreference {
+  if (typeof window === 'undefined') {
+    return 'system';
+  }
+
+  const value = window.localStorage.getItem(THEME_PREFERENCE_STORAGE_KEY);
+  return value === 'light' || value === 'dark' || value === 'system' ? value : 'system';
+}
+
+function resolveTheme(preference: ThemePreference): 'light' | 'dark' {
+  if (preference === 'light' || preference === 'dark') {
+    return preference;
+  }
+
+  if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark';
+  }
+
+  return 'light';
 }
 
 function withRetryHint(message: string): string {
@@ -320,6 +342,7 @@ export default function SearchPage() {
   const [searchLatencyMs, setSearchLatencyMs] = useState<number | null>(null);
   const [summaryLatencyMs, setSummaryLatencyMs] = useState<number | null>(null);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
+  const [themePreference, setThemePreference] = useState<ThemePreference>('system');
   const activeSearchIdRef = useRef(0);
   const hasInitializedFromUrlRef = useRef(false);
   const hasLoadedHistoryRef = useRef(false);
@@ -464,6 +487,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     setSearchHistory(readStoredHistory());
+    setThemePreference(readStoredThemePreference());
     hasLoadedHistoryRef.current = true;
   }, []);
 
@@ -474,6 +498,37 @@ export default function SearchPage() {
 
     window.localStorage.setItem(SEARCH_HISTORY_STORAGE_KEY, JSON.stringify(searchHistory));
   }, [searchHistory]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(THEME_PREFERENCE_STORAGE_KEY, themePreference);
+
+    const root = document.documentElement;
+    const applyResolvedTheme = (): void => {
+      const resolvedTheme = resolveTheme(themePreference);
+      root.dataset.theme = resolvedTheme;
+      root.style.colorScheme = resolvedTheme;
+    };
+
+    applyResolvedTheme();
+
+    if (themePreference !== 'system') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (): void => {
+      applyResolvedTheme();
+    };
+
+    mediaQuery.addEventListener('change', onChange);
+    return () => {
+      mediaQuery.removeEventListener('change', onChange);
+    };
+  }, [themePreference]);
 
   useEffect(() => {
     if (hasInitializedFromUrlRef.current || typeof window === 'undefined') {
@@ -587,6 +642,8 @@ export default function SearchPage() {
               onClearHistory={() => {
                 setSearchHistory([]);
               }}
+              themePreference={themePreference}
+              onThemeChange={setThemePreference}
             />
             <p className="landing-eyebrow">Verifiable search engine</p>
             <div className="stack landing-copy">
@@ -630,6 +687,8 @@ export default function SearchPage() {
             onClearHistory={() => {
               setSearchHistory([]);
             }}
+            themePreference={themePreference}
+            onThemeChange={setThemePreference}
           />
           <section ref={searchHeaderRef} className="card stack search-header-card">
             <SearchBar

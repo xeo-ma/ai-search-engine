@@ -6,10 +6,14 @@ export interface SearchHistoryEntry {
   lastSearchedAt: string;
 }
 
+export type ThemePreference = 'system' | 'light' | 'dark';
+
 interface AppUtilitiesProps {
   historyItems: SearchHistoryEntry[];
   onRunHistory: (query: string) => void;
   onClearHistory: () => void;
+  themePreference: ThemePreference;
+  onThemeChange: (theme: ThemePreference) => void;
 }
 
 interface HistoryGroup {
@@ -99,15 +103,33 @@ function SettingsIcon(): JSX.Element {
   );
 }
 
-export function AppUtilities({ historyItems, onRunHistory, onClearHistory }: AppUtilitiesProps) {
+function EmptyHistoryIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 8.6v4.6l3 1.9" />
+      <path d="M6.2 6.2 4.5 4.5" />
+    </svg>
+  );
+}
+
+export function AppUtilities({
+  historyItems,
+  onRunHistory,
+  onClearHistory,
+  themePreference,
+  onThemeChange,
+}: AppUtilitiesProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showClearHistoryConfirm, setShowClearHistoryConfirm] = useState(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
+  const cancelClearHistoryRef = useRef<HTMLButtonElement | null>(null);
   const historyGroups = useMemo(() => groupHistory(historyItems), [historyItems]);
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent): void {
-      if (!showSettings) {
+      if (!showSettings || showClearHistoryConfirm) {
         return;
       }
 
@@ -125,6 +147,7 @@ export function AppUtilities({ historyItems, onRunHistory, onClearHistory }: App
 
     function onKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Escape') {
+        setShowClearHistoryConfirm(false);
         setShowSettings(false);
         setShowHistory(false);
       }
@@ -136,7 +159,15 @@ export function AppUtilities({ historyItems, onRunHistory, onClearHistory }: App
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [showSettings]);
+  }, [showClearHistoryConfirm, showSettings]);
+
+  useEffect(() => {
+    if (!showClearHistoryConfirm) {
+      return;
+    }
+
+    cancelClearHistoryRef.current?.focus();
+  }, [showClearHistoryConfirm]);
 
   return (
     <>
@@ -170,6 +201,22 @@ export function AppUtilities({ historyItems, onRunHistory, onClearHistory }: App
               {showSettings ? (
                 <div className="settings-menu" role="menu" aria-label="Settings menu">
                   <div className="settings-menu-section">
+                    <p className="settings-menu-label">Appearance</p>
+                    <div className="settings-theme-control" role="group" aria-label="Appearance">
+                      {(['system', 'light', 'dark'] as const).map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          className={`settings-theme-option${themePreference === option ? ' is-active' : ''}`}
+                          aria-pressed={themePreference === option}
+                          onClick={() => onThemeChange(option)}
+                        >
+                          {option === 'system' ? 'System' : option === 'light' ? 'Light' : 'Dark'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="settings-menu-section">
                     <p className="settings-menu-label">Search</p>
                     <div className="settings-menu-row">
                       <span className="settings-menu-value">Safe search</span>
@@ -182,11 +229,11 @@ export function AppUtilities({ historyItems, onRunHistory, onClearHistory }: App
                       type="button"
                       className="settings-menu-action"
                       onClick={() => {
-                        onClearHistory();
                         setShowSettings(false);
+                        setShowClearHistoryConfirm(true);
                       }}
                     >
-                      Clear local history
+                      Clear history
                     </button>
                   </div>
                 </div>
@@ -221,7 +268,12 @@ export function AppUtilities({ historyItems, onRunHistory, onClearHistory }: App
             </div>
 
             {historyGroups.length === 0 ? (
-              <p className="muted history-drawer-empty">No searches saved yet.</p>
+              <div className="stack history-drawer-empty-state">
+                <div className="history-drawer-empty-icon">
+                  <EmptyHistoryIcon />
+                </div>
+                <p className="muted history-drawer-empty">No searches saved yet.</p>
+              </div>
             ) : (
               <div className="stack history-groups">
                 {historyGroups.map((group) => (
@@ -248,6 +300,52 @@ export function AppUtilities({ historyItems, onRunHistory, onClearHistory }: App
               </div>
             )}
           </aside>
+        </>
+      ) : null}
+
+      {showClearHistoryConfirm ? (
+        <>
+          <button
+            type="button"
+            className="confirm-modal-backdrop"
+            aria-label="Close clear history confirmation"
+            onClick={() => setShowClearHistoryConfirm(false)}
+          />
+          <div
+            className="confirm-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="clear-history-title"
+            aria-describedby="clear-history-description"
+          >
+            <div className="stack confirm-modal-copy">
+              <h2 id="clear-history-title">Clear search history?</h2>
+              <p id="clear-history-description">
+                This will remove your recent searches from this browser. This action cannot be undone.
+              </p>
+              <p className="confirm-modal-note">Only local history will be cleared. Your current search results will stay open.</p>
+            </div>
+            <div className="confirm-modal-actions">
+              <button
+                ref={cancelClearHistoryRef}
+                type="button"
+                className="confirm-modal-button confirm-modal-button-secondary"
+                onClick={() => setShowClearHistoryConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="confirm-modal-button confirm-modal-button-destructive"
+                onClick={() => {
+                  onClearHistory();
+                  setShowClearHistoryConfirm(false);
+                }}
+              >
+                Clear history
+              </button>
+            </div>
+          </div>
         </>
       ) : null}
     </>
