@@ -7,6 +7,7 @@ import {
   searchRequestSchema,
 } from './dto.js';
 import { buildRankingAudit, buildSummaryEvidenceSelection, rerankSearchResults } from './evidence-pipeline.js';
+import { buildSearchCapabilities } from './plan-features.js';
 import { normalizeSnippet } from './snippet-normalizer.js';
 
 export interface SearchServiceOptions {
@@ -124,6 +125,7 @@ export class SearchService {
       safeMode: request.safeMode,
     });
     const rankingAudit = buildRankingAudit(query, results, { safeMode: request.safeMode });
+    const capabilities = buildSearchCapabilities(request.plan, request.deepSearch);
 
     return {
       query: payload.query?.original ?? query,
@@ -136,6 +138,7 @@ export class SearchService {
       selectedCount: evidenceSelection.selectedCount,
       selectedEvidence: evidenceSelection.selectedEvidence,
       rankingAudit,
+      capabilities,
       moreResultsAvailable: payload.web?.more_results_available,
     };
   }

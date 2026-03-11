@@ -13,6 +13,12 @@ export interface SystemTraceData {
   selectedSources: SummarySourceLink[];
   latencyMs: number | null;
   claimCount: number;
+  capabilities?: {
+    plan: 'free' | 'pro';
+    deepSearchRequested: boolean;
+    deepSearchAllowed: boolean;
+    deepSearchApplied: boolean;
+  } | null;
   rankingAudit?: {
     safeSearchLevel: 'strict' | 'off';
     reranked: boolean;
@@ -123,6 +129,23 @@ export function SystemTracePanel({ trace }: { trace: SystemTraceData }) {
                 {formatLatency(trace.latencyMs)} latency
               </dd>
             </div>
+
+            {trace.capabilities ? (
+              <div className="system-trace-row">
+                <dt>Plan</dt>
+                <dd className="system-trace-value">
+                  {trace.capabilities.plan}
+                  <br />
+                  Deep search {trace.capabilities.deepSearchRequested ? 'requested' : 'not requested'}
+                  <br />
+                  {trace.capabilities.deepSearchAllowed
+                    ? trace.capabilities.deepSearchApplied
+                      ? 'Deep search applied'
+                      : 'Deep search available'
+                    : 'Deep search unavailable'}
+                </dd>
+              </div>
+            ) : null}
 
             {trace.rankingAudit ? (
               <div className="system-trace-row">

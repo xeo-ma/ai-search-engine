@@ -1,8 +1,13 @@
 import { z } from 'zod';
 
+export const searchPlanSchema = z.enum(['free', 'pro']);
+export type SearchPlanDto = z.infer<typeof searchPlanSchema>;
+
 export const searchRequestSchema = z.object({
   query: z.string().trim().min(1),
   safeMode: z.boolean().default(true),
+  plan: searchPlanSchema.default('free'),
+  deepSearch: z.boolean().default(false),
   count: z.number().int().min(1).max(20).optional(),
   offset: z.number().int().min(0).optional(),
   country: z.string().length(2).optional(),
@@ -34,6 +39,13 @@ export interface SearchRankingAuditDto {
   topDemotionReasons: string[];
 }
 
+export interface SearchCapabilitiesDto {
+  plan: SearchPlanDto;
+  deepSearchRequested: boolean;
+  deepSearchAllowed: boolean;
+  deepSearchApplied: boolean;
+}
+
 export interface SearchResponseDto {
   query: string;
   safeModeApplied: boolean;
@@ -45,5 +57,6 @@ export interface SearchResponseDto {
   selectedCount?: number | undefined;
   selectedEvidence?: SearchResultDto[] | undefined;
   rankingAudit?: SearchRankingAuditDto | undefined;
+  capabilities?: SearchCapabilitiesDto | undefined;
   moreResultsAvailable?: boolean | undefined;
 }

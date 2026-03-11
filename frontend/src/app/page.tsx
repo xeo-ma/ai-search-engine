@@ -15,6 +15,7 @@ import {
   defineApi,
   searchApi,
   summarizeApi,
+  type SearchRequest,
   type DefinitionResponse,
   type SearchResponse,
 } from '../lib/api-client';
@@ -32,6 +33,8 @@ const PAGE_SIZE = 10;
 const SEARCH_HISTORY_STORAGE_KEY = 'ai-search-history';
 const SAFE_MODE_STORAGE_KEY = 'ai-search-safe-mode';
 const THEME_PREFERENCE_STORAGE_KEY = 'ai-search-theme';
+const SEARCH_PLAN: SearchRequest['plan'] = 'free';
+const DEFAULT_DEEP_SEARCH = false;
 const MAX_SEARCH_HISTORY_ITEMS = 24;
 const LETTERS_ONLY_PATTERN = /^[a-zA-Z]+$/;
 const MIN_DEFINITION_WORD_LENGTH = 2;
@@ -434,7 +437,14 @@ export default function SearchPage() {
     }
 
     try {
-      const data = await searchApi({ query: trimmedQuery, safeMode: requestedSafeMode, count: PAGE_SIZE, offset: 0 });
+      const data = await searchApi({
+        query: trimmedQuery,
+        safeMode: requestedSafeMode,
+        plan: SEARCH_PLAN,
+        deepSearch: DEFAULT_DEEP_SEARCH,
+        count: PAGE_SIZE,
+        offset: 0,
+      });
       if (activeSearchIdRef.current !== searchId) {
         return;
       }
@@ -512,6 +522,14 @@ export default function SearchPage() {
         latencyMs:
           searchLatencyMs !== null ? searchLatencyMs + (summaryLatencyMs ?? 0) : summaryLatencyMs ?? null,
         claimCount: response.claims.length,
+        capabilities: response.capabilities
+          ? {
+              plan: response.capabilities.plan,
+              deepSearchRequested: response.capabilities.deepSearchRequested,
+              deepSearchAllowed: response.capabilities.deepSearchAllowed,
+              deepSearchApplied: response.capabilities.deepSearchApplied,
+            }
+          : null,
         rankingAudit: response.rankingAudit
           ? {
               safeSearchLevel: response.rankingAudit.safeSearchLevel,
@@ -638,6 +656,8 @@ export default function SearchPage() {
       const data = await searchApi({
         query: submittedQuery,
         safeMode,
+        plan: SEARCH_PLAN,
+        deepSearch: DEFAULT_DEEP_SEARCH,
         count: PAGE_SIZE,
         offset: nextPageOffset,
       });

@@ -27,12 +27,20 @@ export interface SearchResponse {
     contextualSensitiveDemotions: number;
     topDemotionReasons: string[];
   };
+  capabilities?: {
+    plan: 'free' | 'pro';
+    deepSearchRequested: boolean;
+    deepSearchAllowed: boolean;
+    deepSearchApplied: boolean;
+  };
   moreResultsAvailable?: boolean;
 }
 
 export interface SearchRequest {
   query: string;
   safeMode?: boolean;
+  plan?: 'free' | 'pro';
+  deepSearch?: boolean;
   count?: number;
   offset?: number;
 }
