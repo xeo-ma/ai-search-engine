@@ -204,4 +204,4 @@ Optional:
 - Auth and billing are production-capable, but still depend on correct SMTP, Stripe webhook, and deployed env configuration.
 
 ## License
-This project is licensed under the MIT License — see the LICENSE file for details.
+All rights reserved — see the [LICENSE](/Users/xeo/code/projects/ai-search-engine/LICENSE) file for details.
