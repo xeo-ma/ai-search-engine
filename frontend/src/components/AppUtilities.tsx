@@ -320,7 +320,7 @@ export function AppUtilities({
                               void runAccountAction('upgrade', onUpgradeToPro);
                             }}
                           >
-                            {pendingAccountAction === 'upgrade' ? 'Opening checkout...' : 'Upgrade to Pro'}
+                            {pendingAccountAction === 'upgrade' ? 'Opening billing...' : 'Upgrade to Pro'}
                           </button>
                         </div>
                       )}

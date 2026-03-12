@@ -29,7 +29,7 @@ export async function POST(): Promise<NextResponse> {
   const stripe = getStripeServerClient();
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: user.stripeCustomerId,
-    return_url: `${appUrl}/`,
+    return_url: `${appUrl}/billing`,
   });
 
   return NextResponse.json({ url: portalSession.url }, { status: 200 });

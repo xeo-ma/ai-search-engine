@@ -26,11 +26,20 @@ export async function POST(): Promise<NextResponse> {
     select: {
       email: true,
       stripeCustomerId: true,
+      entitlement: {
+        select: {
+          plan: true,
+        },
+      },
     },
   });
 
   if (!user?.email) {
     return NextResponse.json({ message: 'No email is associated with this account.' }, { status: 400 });
+  }
+
+  if (user.entitlement?.plan === 'pro') {
+    return NextResponse.json({ message: 'This account is already on Pro.' }, { status: 409 });
   }
 
   const stripe = getStripeServerClient();
@@ -56,6 +65,7 @@ export async function POST(): Promise<NextResponse> {
 
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: 'subscription',
+    ui_mode: 'custom',
     customer: stripeCustomerId,
     line_items: [
       {
@@ -63,12 +73,21 @@ export async function POST(): Promise<NextResponse> {
         quantity: 1,
       },
     ],
-    success_url: `${appUrl}/billing?billing=success`,
-    cancel_url: `${appUrl}/billing?billing=cancelled`,
+    return_url: `${appUrl}/billing?billing=return`,
+    payment_method_collection: 'always',
     metadata: {
       userId,
     },
+    subscription_data: {
+      metadata: {
+        userId,
+      },
+    },
   });
 
-  return NextResponse.json({ url: checkoutSession.url }, { status: 200 });
+  if (!checkoutSession.client_secret) {
+    return NextResponse.json({ message: 'Unable to initialize billing checkout.' }, { status: 500 });
+  }
+
+  return NextResponse.json({ clientSecret: checkoutSession.client_secret }, { status: 200 });
 }

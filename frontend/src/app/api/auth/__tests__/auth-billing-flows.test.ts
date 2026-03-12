@@ -23,6 +23,14 @@ const prismaMock = {
 
 const sendPasswordResetEmailMock = vi.fn();
 const isEmailDeliveryConfiguredMock = vi.fn(() => true);
+const getEmailDeliveryDiagnosticsMock = vi.fn(() => ({
+  hasHost: true,
+  hasPort: true,
+  portIsNumber: true,
+  hasUser: true,
+  hasPassword: true,
+  hasFrom: true,
+}));
 const getAuthSessionMock = vi.fn();
 
 const stripeMock = {
@@ -51,6 +59,7 @@ vi.mock('../../../../lib/db', () => ({
 vi.mock('../../../../lib/auth-email', () => ({
   sendPasswordResetEmail: sendPasswordResetEmailMock,
   isEmailDeliveryConfigured: isEmailDeliveryConfiguredMock,
+  getEmailDeliveryDiagnostics: getEmailDeliveryDiagnosticsMock,
 }));
 
 vi.mock('../../../../lib/auth', async () => {
@@ -232,6 +241,37 @@ describe('auth and billing flows', () => {
       expect.objectContaining({
         where: { id: 'user_123' },
         data: { stripeCustomerId: 'cus_123' },
+      }),
+    );
+  });
+
+  it('creates a custom checkout session client secret for in-app billing', async () => {
+    getAuthSessionMock.mockResolvedValue({
+      user: {
+        id: 'user_123',
+      },
+    });
+    prismaMock.user.findUnique.mockResolvedValue({
+      email: 'user@example.com',
+      stripeCustomerId: null,
+      entitlement: {
+        plan: 'free',
+      },
+    });
+    prismaMock.user.update.mockResolvedValue({ id: 'user_123' });
+    stripeMock.customers.create.mockResolvedValue({ id: 'cus_123' });
+    stripeMock.checkout.sessions.create.mockResolvedValue({ client_secret: 'cs_test_123' });
+
+    const { POST } = await import('../../billing/custom-checkout/route');
+    const response = await POST();
+    const body = (await response.json()) as { clientSecret: string };
+
+    expect(response.status).toBe(200);
+    expect(body.clientSecret).toBe('cs_test_123');
+    expect(stripeMock.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ui_mode: 'custom',
+        mode: 'subscription',
       }),
     );
   });

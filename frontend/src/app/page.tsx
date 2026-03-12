@@ -15,8 +15,6 @@ import type { SearchItem } from '../lib/api-client';
 import {
   defineApi,
   fetchAccountState,
-  createBillingPortalSession,
-  createCheckoutSession,
   searchApi,
   summarizeApi,
   updateAccountPreferences,
@@ -441,17 +439,11 @@ export default function SearchPage() {
   }
 
   async function handleUpgradeToPro(): Promise<void> {
-    const { url } = await createCheckoutSession();
-    if (typeof window !== 'undefined') {
-      window.location.assign(url);
-    }
+    window.location.assign('/billing');
   }
 
   async function handleManageBilling(): Promise<void> {
-    const { url } = await createBillingPortalSession();
-    if (typeof window !== 'undefined') {
-      window.location.assign(url);
-    }
+    window.location.assign('/billing');
   }
 
   async function onSearch(

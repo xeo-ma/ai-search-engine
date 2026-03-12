@@ -97,6 +97,7 @@ const SEARCH_ENDPOINT = '/api/search';
 const ACCOUNT_ENDPOINT = '/api/account';
 const ACCOUNT_PREFERENCES_ENDPOINT = '/api/account/preferences';
 const BILLING_CHECKOUT_ENDPOINT = '/api/billing/checkout';
+const BILLING_CUSTOM_CHECKOUT_ENDPOINT = '/api/billing/custom-checkout';
 const BILLING_PORTAL_ENDPOINT = '/api/billing/portal';
 const SUMMARIZE_ENDPOINT = '/api/summarize';
 const DEFINE_ENDPOINT = '/api/define';
@@ -214,6 +215,19 @@ export async function createCheckoutSession(): Promise<{ url: string }> {
   }
 
   return (await response.json()) as { url: string };
+}
+
+export async function createCustomCheckoutSession(): Promise<{ clientSecret: string }> {
+  const response = await fetch(BILLING_CUSTOM_CHECKOUT_ENDPOINT, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    const data = (await response.json()) as { message?: string };
+    throw new Error(data.message ?? 'Unable to initialize billing checkout.');
+  }
+
+  return (await response.json()) as { clientSecret: string };
 }
 
 export async function createBillingPortalSession(): Promise<{ url: string }> {
