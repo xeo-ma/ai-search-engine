@@ -893,12 +893,6 @@ export default function SearchPage() {
             onThemeChange={setThemePreference}
           />
           <section ref={searchHeaderRef} className="card stack search-header-card">
-            <div className="results-toolbar-copy">
-              <p className="results-toolbar-label">Search</p>
-              <p className="results-toolbar-text">
-                Refine the query, then scan summary, sources, and raw web results in one flow.
-              </p>
-            </div>
             <SearchBar
               value={query}
               onChange={setQuery}
