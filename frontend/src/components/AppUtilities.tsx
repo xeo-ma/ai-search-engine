@@ -15,16 +15,12 @@ interface AppUtilitiesProps {
   onRunHistory: (query: string) => void;
   onClearHistory: () => void;
   authenticated: boolean;
-  plan: PlanPreference;
-  planMessage: string;
   email: string | null;
   deepSearchEnabled: boolean;
   deepSearchAvailable: boolean;
   onDeepSearchChange: (enabled: boolean) => void;
-  freeSearchesRemaining: number | null;
   onSignIn: () => Promise<void> | void;
   onSignOut: () => Promise<void> | void;
-  onUpgradeToPro: () => Promise<void> | void;
   onManageBilling: () => Promise<void> | void;
   safeMode: boolean;
   onSafeModeChange: (safeMode: boolean) => void;
@@ -120,6 +116,15 @@ function SettingsIcon(): JSX.Element {
   );
 }
 
+function AccountIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="10" cy="6.4" r="2.8" />
+      <path d="M4.6 16.2a5.4 5.4 0 0 1 10.8 0" />
+    </svg>
+  );
+}
+
 function EmptyHistoryIcon(): JSX.Element {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -130,30 +135,17 @@ function EmptyHistoryIcon(): JSX.Element {
   );
 }
 
-function LockIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="4.8" y="8.5" width="10.4" height="7.2" rx="1.8" />
-      <path d="M7 8.5V6.8a3 3 0 0 1 6 0v1.7" />
-    </svg>
-  );
-}
-
 export function AppUtilities({
   historyItems,
   onRunHistory,
   onClearHistory,
   authenticated,
-  plan,
-  planMessage,
   email,
   deepSearchEnabled,
   deepSearchAvailable,
   onDeepSearchChange,
-  freeSearchesRemaining,
   onSignIn,
   onSignOut,
-  onUpgradeToPro,
   onManageBilling,
   safeMode,
   onSafeModeChange,
@@ -163,16 +155,18 @@ export function AppUtilities({
 }: AppUtilitiesProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
   const [showClearHistoryConfirm, setShowClearHistoryConfirm] = useState(false);
   const [accountActionError, setAccountActionError] = useState<string | null>(null);
-  const [pendingAccountAction, setPendingAccountAction] = useState<null | 'signin' | 'signout' | 'upgrade' | 'billing'>(null);
+  const [pendingAccountAction, setPendingAccountAction] = useState<null | 'signin' | 'signout' | 'billing'>(null);
   const settingsRef = useRef<HTMLDivElement | null>(null);
+  const accountRef = useRef<HTMLDivElement | null>(null);
   const cancelClearHistoryRef = useRef<HTMLButtonElement | null>(null);
   const historyGroups = useMemo(() => groupHistory(historyItems), [historyItems]);
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent): void {
-      if ((!showSettings && !showHistory) || showClearHistoryConfirm) {
+      if ((!showSettings && !showHistory && !showAccount) || showClearHistoryConfirm) {
         return;
       }
 
@@ -185,13 +179,20 @@ export function AppUtilities({
         return;
       }
 
+      if (accountRef.current?.contains(target)) {
+        return;
+      }
+
       setShowSettings(false);
+      setShowAccount(false);
+      setShowHistory(false);
     }
 
     function onKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Escape') {
         setShowClearHistoryConfirm(false);
         setShowSettings(false);
+        setShowAccount(false);
         setShowHistory(false);
       }
     }
@@ -202,7 +203,7 @@ export function AppUtilities({
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [showClearHistoryConfirm, showHistory, showSettings]);
+  }, [showAccount, showClearHistoryConfirm, showHistory, showSettings]);
 
   useEffect(() => {
     if (!showClearHistoryConfirm) {
@@ -213,7 +214,7 @@ export function AppUtilities({
   }, [showClearHistoryConfirm]);
 
   async function runAccountAction(
-    action: 'signin' | 'signout' | 'upgrade' | 'billing',
+    action: 'signin' | 'signout' | 'billing',
     callback: () => Promise<void> | void,
   ): Promise<void> {
     setAccountActionError(null);
@@ -243,9 +244,11 @@ export function AppUtilities({
                 if (showHistory) {
                   setShowHistory(false);
                   setShowSettings(true);
+                  setShowAccount(false);
                   return;
                 }
 
+                setShowAccount(false);
                 setShowSettings((current) => !current);
                 setShowHistory(false);
               }}
@@ -271,58 +274,6 @@ export function AppUtilities({
                     </div>
                   </div>
                   <div className="settings-menu-section">
-                    <p className="settings-menu-label">Plan</p>
-                    <div className="stack settings-menu-copy">
-                      {authenticated && email ? <p className="settings-menu-help">Signed in as {email}</p> : null}
-                      <div className="settings-menu-row">
-                        <span className="settings-menu-value">Current plan</span>
-                        <span className="settings-menu-pill">{plan === 'pro' ? 'Pro' : 'Free'}</span>
-                      </div>
-                      <p className="settings-menu-help">{planMessage}</p>
-                      {!authenticated ? (
-                        <div className="settings-menu-button-row">
-                          <button
-                            type="button"
-                            className="settings-menu-button settings-menu-button-primary"
-                            disabled={pendingAccountAction !== null}
-                            onClick={() => {
-                              void runAccountAction('signin', onSignIn);
-                            }}
-                          >
-                            {pendingAccountAction === 'signin' ? 'Opening sign in...' : 'Sign in'}
-                          </button>
-                        </div>
-                      ) : plan === 'pro' ? (
-                        <div className="settings-menu-button-row">
-                          <button
-                            type="button"
-                            className="settings-menu-button settings-menu-button-secondary"
-                            disabled={pendingAccountAction !== null}
-                            onClick={() => {
-                              void runAccountAction('billing', onManageBilling);
-                            }}
-                          >
-                            {pendingAccountAction === 'billing' ? 'Opening billing...' : 'Manage billing'}
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="settings-menu-button-row">
-                          <button
-                            type="button"
-                            className="settings-menu-button settings-menu-button-primary"
-                            disabled={pendingAccountAction !== null}
-                            onClick={() => {
-                              void runAccountAction('upgrade', onUpgradeToPro);
-                            }}
-                          >
-                            {pendingAccountAction === 'upgrade' ? 'Opening billing...' : 'Upgrade to Pro'}
-                          </button>
-                        </div>
-                      )}
-                      {accountActionError ? <p className="settings-menu-error">{accountActionError}</p> : null}
-                    </div>
-                  </div>
-                  <div className="settings-menu-section">
                     <p className="settings-menu-label">Search</p>
                     <div className="stack settings-menu-copy">
                       <div className="settings-menu-row">
@@ -341,51 +292,29 @@ export function AppUtilities({
                         </button>
                       </div>
                       <p className="settings-menu-help">Filters sensitive or lower-trust results.</p>
-                      <div className={`settings-menu-row${!deepSearchAvailable ? ' is-disabled' : ''}`}>
-                        <span className="settings-menu-value settings-menu-value-with-icon">
-                          {!deepSearchAvailable ? (
-                            <span className="settings-menu-lock" aria-hidden="true">
-                              <LockIcon />
+                      {deepSearchAvailable ? (
+                        <>
+                          <div className="settings-menu-row">
+                            <span className="settings-menu-value settings-menu-value-with-icon">
+                              <span>Deep search</span>
                             </span>
-                          ) : null}
-                          <span>Deep search</span>
-                        </span>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={deepSearchAvailable ? deepSearchEnabled : false}
-                          aria-label={
-                            deepSearchAvailable
-                              ? `Deep search ${deepSearchEnabled ? 'on' : 'off'}`
-                              : authenticated
-                                ? 'Deep search available on Pro'
-                                : 'Sign in to access Pro features'
-                          }
-                          className={`settings-switch${deepSearchEnabled && deepSearchAvailable ? ' is-active' : ''}`}
-                          disabled={!deepSearchAvailable}
-                          onClick={() => {
-                            if (!deepSearchAvailable) {
-                              return;
-                            }
-                            onDeepSearchChange(!deepSearchEnabled);
-                          }}
-                        >
-                          <span className="settings-switch-track" aria-hidden="true">
-                            <span className="settings-switch-thumb" />
-                          </span>
-                        </button>
-                      </div>
-                      <p className="settings-menu-help">
-                        {deepSearchAvailable
-                          ? 'Extends retrieval depth before reranking.'
-                          : authenticated
-                            ? 'Upgrade to Pro to enable deeper retrieval.'
-                            : 'Sign in to sync plan and deep search preferences.'}
-                      </p>
-                      {plan === 'free' && freeSearchesRemaining !== null ? (
-                        <p className="settings-menu-help">
-                          {freeSearchesRemaining} free search{freeSearchesRemaining === 1 ? '' : 'es'} left today.
-                        </p>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={deepSearchEnabled}
+                              aria-label={`Deep search ${deepSearchEnabled ? 'on' : 'off'}`}
+                              className={`settings-switch${deepSearchEnabled ? ' is-active' : ''}`}
+                              onClick={() => {
+                                onDeepSearchChange(!deepSearchEnabled);
+                              }}
+                            >
+                              <span className="settings-switch-track" aria-hidden="true">
+                                <span className="settings-switch-thumb" />
+                              </span>
+                            </button>
+                          </div>
+                          <p className="settings-menu-help">Extends retrieval depth before reranking.</p>
+                        </>
                       ) : null}
                     </div>
                   </div>
@@ -494,6 +423,66 @@ export function AppUtilities({
                     ))}
                   </div>
                 )}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="page-utility-menu-shell" ref={accountRef}>
+            <button
+              type="button"
+              className="page-utility-button"
+              aria-label="Open account menu"
+              aria-expanded={showAccount}
+              onClick={() => {
+                setShowSettings(false);
+                setShowHistory(false);
+                setShowAccount((current) => !current);
+              }}
+            >
+              <AccountIcon />
+            </button>
+            {showAccount ? (
+              <div className="account-menu" role="menu" aria-label="Account menu">
+                <div className="account-menu-section">
+                  <p className="account-menu-label">Account</p>
+                  {authenticated && email ? <p className="account-menu-help">Signed in as {email}</p> : null}
+                  {authenticated ? (
+                    <button
+                      type="button"
+                      className="account-menu-action"
+                      disabled={pendingAccountAction !== null}
+                      onClick={() => {
+                        void runAccountAction('billing', onManageBilling);
+                      }}
+                    >
+                      {pendingAccountAction === 'billing' ? 'Opening billing...' : 'Billing'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="account-menu-action"
+                      disabled={pendingAccountAction !== null}
+                      onClick={() => {
+                        void runAccountAction('signin', onSignIn);
+                      }}
+                    >
+                      {pendingAccountAction === 'signin' ? 'Opening sign in...' : 'Sign in'}
+                    </button>
+                  )}
+                  {authenticated ? (
+                    <button
+                      type="button"
+                      className="account-menu-action account-menu-action-secondary"
+                      disabled={pendingAccountAction !== null}
+                      onClick={() => {
+                        void runAccountAction('signout', onSignOut);
+                      }}
+                    >
+                      {pendingAccountAction === 'signout' ? 'Signing out...' : 'Sign out'}
+                    </button>
+                  ) : null}
+                  {accountActionError ? <p className="account-menu-error">{accountActionError}</p> : null}
+                </div>
               </div>
             ) : null}
           </div>

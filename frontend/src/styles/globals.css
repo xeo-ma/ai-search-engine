@@ -903,6 +903,24 @@ main {
   text-align: left;
 }
 
+.account-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: -4px;
+  z-index: 35;
+  width: min(220px, calc(100vw - 32px));
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(220, 229, 239, 0.94);
+  border-radius: 14px;
+  background: rgba(252, 253, 255, 0.88);
+  box-shadow: -10px 0 25px rgba(23, 33, 47, 0.06), 0 20px 40px rgba(23, 33, 47, 0.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  text-align: left;
+}
+
 .settings-menu-section {
   display: grid;
   gap: 4px;
@@ -915,7 +933,21 @@ main {
   border-top: 0;
 }
 
+.account-menu-section {
+  display: grid;
+  gap: 6px;
+}
+
 .settings-menu-label {
+  margin: 0;
+  color: #66768d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.account-menu-label {
   margin: 0;
   color: #66768d;
   font-size: 0.72rem;
@@ -935,6 +967,13 @@ main {
 }
 
 .settings-menu-help {
+  margin: 0;
+  color: #6b7b91;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.account-menu-help {
   margin: 0;
   color: #6b7b91;
   font-size: 0.82rem;
@@ -1120,6 +1159,33 @@ main {
 .settings-menu-neutral-action:hover,
 .settings-menu-neutral-action:focus-visible {
   color: #2f4158;
+}
+
+.account-menu-action {
+  width: 100%;
+  justify-content: flex-start;
+  min-height: 38px;
+  padding: 0;
+  background: transparent;
+  color: #4b5e76;
+  font-weight: 500;
+  text-align: left;
+}
+
+.account-menu-action:hover,
+.account-menu-action:focus-visible {
+  color: #2f4158;
+}
+
+.account-menu-action-secondary {
+  color: #5d6d83;
+}
+
+.account-menu-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .settings-menu-button-row {
@@ -1449,8 +1515,13 @@ main {
   box-shadow: -10px 0 28px rgba(0, 0, 0, 0.28), 0 24px 48px rgba(0, 0, 0, 0.34);
 }
 
+:root[data-theme='dark'] .account-menu {
+  box-shadow: -10px 0 28px rgba(0, 0, 0, 0.28), 0 24px 48px rgba(0, 0, 0, 0.34);
+}
+
 :root[data-theme='dark'] .landing-search .search-bar,
 :root[data-theme='dark'] .settings-menu,
+:root[data-theme='dark'] .account-menu,
 :root[data-theme='dark'] .history-panel,
 :root[data-theme='dark'] .confirm-modal,
 :root[data-theme='dark'] .auth-card {
@@ -1523,6 +1594,7 @@ main {
 }
 
 :root[data-theme='dark'] .settings-menu-label,
+:root[data-theme='dark'] .account-menu-label,
 :root[data-theme='dark'] .history-panel-eyebrow,
 :root[data-theme='dark'] .history-group-label,
 :root[data-theme='dark'] .source-grounding-label,
@@ -1541,6 +1613,7 @@ main {
 :root[data-theme='dark'] .summary-meta,
 :root[data-theme='dark'] .history-item-time,
 :root[data-theme='dark'] .settings-menu-help,
+:root[data-theme='dark'] .account-menu-help,
 :root[data-theme='dark'] .summary-source-domain,
 :root[data-theme='dark'] .summary-top-source-domain,
 :root[data-theme='dark'] .result-domain,
@@ -1842,6 +1915,18 @@ main {
   color: #eef4fb;
 }
 
+:root[data-theme='dark'] .account-menu-action,
+:root[data-theme='dark'] .account-menu-action-secondary {
+  color: #b9c7d6;
+}
+
+:root[data-theme='dark'] .account-menu-action:hover,
+:root[data-theme='dark'] .account-menu-action:focus-visible,
+:root[data-theme='dark'] .account-menu-action-secondary:hover,
+:root[data-theme='dark'] .account-menu-action-secondary:focus-visible {
+  color: #eef4fb;
+}
+
 :root[data-theme='dark'] .settings-menu-button-primary {
   background: #4f8ee8;
   color: #f8fbff;
@@ -1866,6 +1951,10 @@ main {
 }
 
 :root[data-theme='dark'] .settings-menu-error {
+  color: #fdba74;
+}
+
+:root[data-theme='dark'] .account-menu-error {
   color: #fdba74;
 }
 
@@ -3001,6 +3090,10 @@ button:disabled {
 
   .settings-menu {
     width: min(260px, calc(100vw - 24px));
+  }
+
+  .account-menu {
+    width: min(220px, calc(100vw - 24px));
   }
 
   .history-panel {
