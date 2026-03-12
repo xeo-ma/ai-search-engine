@@ -164,7 +164,7 @@ export function AppUtilities({
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent): void {
-      if ((!showSettings && !showHistory && !showAccount) || showClearHistoryConfirm) {
+      if (!showSettings && !showHistory && !showAccount && !showClearHistoryConfirm) {
         return;
       }
 
@@ -184,6 +184,7 @@ export function AppUtilities({
       setShowSettings(false);
       setShowAccount(false);
       setShowHistory(false);
+      setShowClearHistoryConfirm(false);
     }
 
     function onKeyDown(event: KeyboardEvent): void {
@@ -287,6 +288,44 @@ export function AppUtilities({
                 emptyIcon={<EmptyHistoryIcon />}
               />
             ) : null}
+
+            {showClearHistoryConfirm ? (
+              <div
+                className="confirm-panel"
+                role="alertdialog"
+                aria-modal="false"
+                aria-labelledby="clear-history-title"
+                aria-describedby="clear-history-description"
+              >
+                <div className="stack confirm-panel-copy">
+                  <h2 id="clear-history-title">Clear search history?</h2>
+                  <p id="clear-history-description">
+                    This will remove your recent searches from this browser. This action cannot be undone.
+                  </p>
+                  <p className="confirm-panel-note">Only local history will be cleared. Your current search results will stay open.</p>
+                </div>
+                <div className="confirm-panel-actions">
+                  <button
+                    ref={cancelClearHistoryRef}
+                    type="button"
+                    className="confirm-panel-button confirm-panel-button-secondary"
+                    onClick={() => setShowClearHistoryConfirm(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="confirm-panel-button confirm-panel-button-destructive"
+                    onClick={() => {
+                      onClearHistory();
+                      setShowClearHistoryConfirm(false);
+                    }}
+                  >
+                    Clear history
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="page-utility-menu-shell" ref={accountRef}>
@@ -324,51 +363,6 @@ export function AppUtilities({
         </div>
       </div>
 
-      {showClearHistoryConfirm ? (
-        <>
-          <button
-            type="button"
-            className="confirm-modal-backdrop"
-            aria-label="Close clear history confirmation"
-            onClick={() => setShowClearHistoryConfirm(false)}
-          />
-          <div
-            className="confirm-modal"
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="clear-history-title"
-            aria-describedby="clear-history-description"
-          >
-            <div className="stack confirm-modal-copy">
-              <h2 id="clear-history-title">Clear search history?</h2>
-              <p id="clear-history-description">
-                This will remove your recent searches from this browser. This action cannot be undone.
-              </p>
-              <p className="confirm-modal-note">Only local history will be cleared. Your current search results will stay open.</p>
-            </div>
-            <div className="confirm-modal-actions">
-              <button
-                ref={cancelClearHistoryRef}
-                type="button"
-                className="confirm-modal-button confirm-modal-button-secondary"
-                onClick={() => setShowClearHistoryConfirm(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="confirm-modal-button confirm-modal-button-destructive"
-                onClick={() => {
-                  onClearHistory();
-                  setShowClearHistoryConfirm(false);
-                }}
-              >
-                Clear history
-              </button>
-            </div>
-          </div>
-        </>
-      ) : null}
     </>
   );
 }

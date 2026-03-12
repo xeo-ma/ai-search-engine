@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { signOut } from 'next-auth/react';
 
 import type { AccountStateResponse } from '../lib/api-client';
 import { createBillingPortalSession, createCustomCheckoutSession, fetchAccountState } from '../lib/api-client';
@@ -225,7 +224,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
                 <h2>Upgrade to Pro</h2>
               </div>
             </div>
-            <p className="billing-card-copy">Use available wallet options when offered, or choose a standard payment method below.</p>
+            <p className="billing-card-copy">Choose a payment method below.</p>
             {checkoutStatus === 'loading' ? (
               <div className="billing-checkout-loading" aria-live="polite">
                 <div className="billing-loading-line billing-loading-line-title" />
@@ -243,14 +242,6 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
           <section className="billing-card billing-note-card">
             <p className="billing-card-copy">You need an account before starting a subscription so billing and Pro entitlements can stay linked to the correct user.</p>
           </section>
-        ) : null}
-
-        {isAuthenticated ? (
-          <div className="billing-account-actions">
-            <button type="button" className="billing-tertiary-button" onClick={() => void signOut({ callbackUrl: '/' })}>
-              Sign out
-            </button>
-          </div>
         ) : null}
       </section>
     </main>

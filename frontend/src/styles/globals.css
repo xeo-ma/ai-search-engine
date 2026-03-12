@@ -1134,14 +1134,16 @@ main {
 
 .settings-menu-neutral-action {
   width: 100%;
+  display: inline-flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 0;
+  gap: 10px;
+  min-height: 40px;
+  padding: 2px 0;
   background: transparent;
   color: #4b5e76;
   font-weight: 500;
+  line-height: 1.4;
   text-align: left;
 }
 
@@ -1149,14 +1151,15 @@ main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  color: #66768d;
 }
 
 .settings-menu-action-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .settings-menu-neutral-action:hover,
@@ -1247,58 +1250,48 @@ main {
   line-height: 1.35;
 }
 
-.confirm-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 59;
-  background: rgba(15, 23, 42, 0.42);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+.confirm-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 36;
+  width: min(360px, calc(100vw - 40px));
+  padding: 18px;
+  border: 1px solid rgba(220, 229, 239, 0.96);
+  border-radius: 16px;
+  background: rgba(252, 253, 255, 0.98);
+  box-shadow: -10px 0 25px rgba(23, 33, 47, 0.06), 0 20px 40px rgba(23, 33, 47, 0.16);
 }
 
-.confirm-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  z-index: 60;
-  width: min(440px, calc(100vw - 32px));
-  padding: 22px;
-  border: 1px solid #d9e3ef;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.2);
-  transform: translate(-50%, -50%);
-}
-
-.confirm-modal-copy {
+.confirm-panel-copy {
   gap: 10px;
 }
 
-.confirm-modal-copy h2 {
+.confirm-panel-copy h2 {
   margin: 0;
   color: #0f172a;
   font-size: 1.15rem;
 }
 
-.confirm-modal-copy p {
+.confirm-panel-copy p {
   margin: 0;
   color: #475569;
   line-height: 1.55;
 }
 
-.confirm-modal-note {
+.confirm-panel-note {
   color: #64748b;
   font-size: 0.92rem;
 }
 
-.confirm-modal-actions {
+.confirm-panel-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 18px;
 }
 
-.confirm-modal-button {
+.confirm-panel-button {
   min-height: 42px;
   padding: 0 16px;
   border: 1px solid transparent;
@@ -1306,25 +1299,25 @@ main {
   font-weight: 600;
 }
 
-.confirm-modal-button-secondary {
+.confirm-panel-button-secondary {
   border-color: #d6e0ec;
   background: #fff;
   color: #334155;
 }
 
-.confirm-modal-button-secondary:hover,
-.confirm-modal-button-secondary:focus-visible {
+.confirm-panel-button-secondary:hover,
+.confirm-panel-button-secondary:focus-visible {
   border-color: #c2d1e2;
   background: #f8fafc;
 }
 
-.confirm-modal-button-destructive {
+.confirm-panel-button-destructive {
   background: #dc2626;
   color: #fff;
 }
 
-.confirm-modal-button-destructive:hover,
-.confirm-modal-button-destructive:focus-visible {
+.confirm-panel-button-destructive:hover,
+.confirm-panel-button-destructive:focus-visible {
   background: #b91c1c;
 }
 
@@ -1527,7 +1520,7 @@ main {
 :root[data-theme='dark'] .settings-menu,
 :root[data-theme='dark'] .account-menu,
 :root[data-theme='dark'] .history-panel,
-:root[data-theme='dark'] .confirm-modal,
+:root[data-theme='dark'] .confirm-panel,
 :root[data-theme='dark'] .auth-card {
   background: rgba(11, 16, 23, 0.92);
   border-color: var(--border);
@@ -1623,8 +1616,8 @@ main {
 :root[data-theme='dark'] .result-domain,
 :root[data-theme='dark'] .results-toolbar-text,
 :root[data-theme='dark'] .evidence-snippet,
-:root[data-theme='dark'] .confirm-modal-copy p,
-:root[data-theme='dark'] .confirm-modal-note,
+:root[data-theme='dark'] .confirm-panel-copy p,
+:root[data-theme='dark'] .confirm-panel-note,
 :root[data-theme='dark'] .history-panel-empty {
   color: var(--muted);
 }
@@ -1962,28 +1955,22 @@ main {
   color: #fdba74;
 }
 
-:root[data-theme='dark'] .confirm-modal-backdrop {
-  background: rgba(2, 6, 23, 0.56);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-}
-
-:root[data-theme='dark'] .confirm-modal {
+:root[data-theme='dark'] .confirm-panel {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-:root[data-theme='dark'] .confirm-modal-copy h2 {
+:root[data-theme='dark'] .confirm-panel-copy h2 {
   color: #f8fafc;
 }
 
-:root[data-theme='dark'] .confirm-modal-button-secondary {
+:root[data-theme='dark'] .confirm-panel-button-secondary {
   border-color: rgba(255, 255, 255, 0.18);
   background: transparent;
   color: var(--text);
 }
 
-:root[data-theme='dark'] .confirm-modal-button-secondary:hover,
-:root[data-theme='dark'] .confirm-modal-button-secondary:focus-visible {
+:root[data-theme='dark'] .confirm-panel-button-secondary:hover,
+:root[data-theme='dark'] .confirm-panel-button-secondary:focus-visible {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.24);
 }
