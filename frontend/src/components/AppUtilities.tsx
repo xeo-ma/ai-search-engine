@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { AccountMenu } from './AccountMenu';
+import { HistoryPanel, type HistoryGroup } from './HistoryPanel';
+import { SettingsMenu } from './SettingsMenu';
 
 export interface SearchHistoryEntry {
   id: string;
@@ -27,11 +30,6 @@ interface AppUtilitiesProps {
   themePreference: ThemePreference;
   onThemeChange: (theme: ThemePreference) => void;
   context?: AppUtilitiesContext;
-}
-
-interface HistoryGroup {
-  label: string;
-  items: SearchHistoryEntry[];
 }
 
 function startOfDay(value: Date): Date {
@@ -256,174 +254,38 @@ export function AppUtilities({
               <SettingsIcon />
             </button>
             {showSettings ? (
-              <div className="settings-menu" role="menu" aria-label="Settings menu">
-                  <div className="settings-menu-section">
-                    <p className="settings-menu-label">Appearance</p>
-                    <div className="settings-theme-control" role="group" aria-label="Appearance">
-                      {(['system', 'light', 'dark'] as const).map((option) => (
-                        <button
-                          key={option}
-                          type="button"
-                          className={`settings-theme-option${themePreference === option ? ' is-active' : ''}`}
-                          aria-pressed={themePreference === option}
-                          onClick={() => onThemeChange(option)}
-                        >
-                          {option === 'system' ? 'System' : option === 'light' ? 'Light' : 'Dark'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="settings-menu-section">
-                    <p className="settings-menu-label">Search</p>
-                    <div className="stack settings-menu-copy">
-                      <div className="settings-menu-row">
-                        <span className="settings-menu-value">Safe search</span>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={safeMode}
-                          aria-label={`Safe search ${safeMode ? 'on' : 'off'}`}
-                          className={`settings-switch${safeMode ? ' is-active' : ''}`}
-                          onClick={() => onSafeModeChange(!safeMode)}
-                        >
-                          <span className="settings-switch-track" aria-hidden="true">
-                            <span className="settings-switch-thumb" />
-                          </span>
-                        </button>
-                      </div>
-                      <p className="settings-menu-help">Filters sensitive or lower-trust results.</p>
-                      {deepSearchAvailable ? (
-                        <>
-                          <div className="settings-menu-row">
-                            <span className="settings-menu-value settings-menu-value-with-icon">
-                              <span>Deep search</span>
-                            </span>
-                            <button
-                              type="button"
-                              role="switch"
-                              aria-checked={deepSearchEnabled}
-                              aria-label={`Deep search ${deepSearchEnabled ? 'on' : 'off'}`}
-                              className={`settings-switch${deepSearchEnabled ? ' is-active' : ''}`}
-                              onClick={() => {
-                                onDeepSearchChange(!deepSearchEnabled);
-                              }}
-                            >
-                              <span className="settings-switch-track" aria-hidden="true">
-                                <span className="settings-switch-thumb" />
-                              </span>
-                            </button>
-                          </div>
-                          <p className="settings-menu-help">Extends retrieval depth before reranking.</p>
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="settings-menu-section">
-                    <p className="settings-menu-label">Library</p>
-                    <button
-                      type="button"
-                      className="settings-menu-neutral-action"
-                      onClick={() => {
-                        setShowSettings(false);
-                        setShowHistory(true);
-                      }}
-                    >
-                      <span className="settings-menu-action-icon" aria-hidden="true">
-                        <HistoryIcon />
-                      </span>
-                      Search history
-                    </button>
-                  </div>
-                  <div className="settings-menu-section">
-                    <p className="settings-menu-label">Data</p>
-                    {authenticated ? (
-                      <button
-                        type="button"
-                        className="settings-menu-neutral-action"
-                        disabled={pendingAccountAction !== null}
-                        onClick={() => {
-                          void runAccountAction('signout', onSignOut);
-                        }}
-                      >
-                        {pendingAccountAction === 'signout' ? 'Signing out...' : 'Sign out'}
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="settings-menu-action"
-                      onClick={() => {
-                        setShowSettings(false);
-                        setShowClearHistoryConfirm(true);
-                      }}
-                    >
-                      Clear history
-                    </button>
-                  </div>
-              </div>
+              <SettingsMenu
+                themePreference={themePreference}
+                onThemeChange={onThemeChange}
+                safeMode={safeMode}
+                onSafeModeChange={onSafeModeChange}
+                deepSearchAvailable={deepSearchAvailable}
+                deepSearchEnabled={deepSearchEnabled}
+                onDeepSearchChange={onDeepSearchChange}
+                onOpenHistory={() => {
+                  setShowSettings(false);
+                  setShowHistory(true);
+                }}
+                onRequestClearHistory={() => {
+                  setShowSettings(false);
+                  setShowClearHistoryConfirm(true);
+                }}
+                historyIcon={<HistoryIcon />}
+              />
             ) : null}
 
             {showHistory ? (
-              <div className="history-panel" role="dialog" aria-label="Search history">
-                <div className="history-panel-header">
-                  <div className="stack history-panel-copy">
-                    <p className="history-panel-eyebrow">History</p>
-                    <h2>Recent searches</h2>
-                  </div>
-                  <div className="history-panel-actions">
-                    <button
-                      type="button"
-                      className="history-panel-back"
-                      onClick={() => {
-                        setShowHistory(false);
-                        setShowSettings(true);
-                      }}
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      className="history-panel-close"
-                      aria-label="Close search history"
-                      onClick={() => setShowHistory(false)}
-                    >
-                      <span aria-hidden="true">×</span>
-                    </button>
-                  </div>
-                </div>
-
-                {historyGroups.length === 0 ? (
-                  <div className="stack history-panel-empty-state">
-                    <div className="history-panel-empty-icon">
-                      <EmptyHistoryIcon />
-                    </div>
-                    <p className="muted history-panel-empty">No searches saved yet.</p>
-                  </div>
-                ) : (
-                  <div className="stack history-groups">
-                    {historyGroups.map((group) => (
-                      <section key={group.label} className="stack history-group">
-                        <p className="history-group-label">{group.label}</p>
-                        <div className="stack history-group-list">
-                          {group.items.map((item) => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              className="history-item"
-                              onClick={() => {
-                                onRunHistory(item.query);
-                                setShowHistory(false);
-                              }}
-                            >
-                              <span className="history-item-query">{item.query}</span>
-                              <span className="history-item-time">{formatHistoryTimestamp(item.lastSearchedAt)}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </section>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <HistoryPanel
+                historyGroups={historyGroups}
+                formatHistoryTimestamp={formatHistoryTimestamp}
+                onRunHistory={onRunHistory}
+                onBack={() => {
+                  setShowHistory(false);
+                  setShowSettings(true);
+                }}
+                onClose={() => setShowHistory(false)}
+                emptyIcon={<EmptyHistoryIcon />}
+              />
             ) : null}
           </div>
 
@@ -442,48 +304,21 @@ export function AppUtilities({
               <AccountIcon />
             </button>
             {showAccount ? (
-              <div className="account-menu" role="menu" aria-label="Account menu">
-                <div className="account-menu-section">
-                  <p className="account-menu-label">Account</p>
-                  {authenticated && email ? <p className="account-menu-help">Signed in as {email}</p> : null}
-                  {authenticated ? (
-                    <button
-                      type="button"
-                      className="account-menu-action"
-                      disabled={pendingAccountAction !== null}
-                      onClick={() => {
-                        void runAccountAction('billing', onManageBilling);
-                      }}
-                    >
-                      {pendingAccountAction === 'billing' ? 'Opening billing...' : 'Billing'}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="account-menu-action"
-                      disabled={pendingAccountAction !== null}
-                      onClick={() => {
-                        void runAccountAction('signin', onSignIn);
-                      }}
-                    >
-                      {pendingAccountAction === 'signin' ? 'Opening sign in...' : 'Sign in'}
-                    </button>
-                  )}
-                  {authenticated ? (
-                    <button
-                      type="button"
-                      className="account-menu-action account-menu-action-secondary"
-                      disabled={pendingAccountAction !== null}
-                      onClick={() => {
-                        void runAccountAction('signout', onSignOut);
-                      }}
-                    >
-                      {pendingAccountAction === 'signout' ? 'Signing out...' : 'Sign out'}
-                    </button>
-                  ) : null}
-                  {accountActionError ? <p className="account-menu-error">{accountActionError}</p> : null}
-                </div>
-              </div>
+              <AccountMenu
+                authenticated={authenticated}
+                email={email}
+                pendingAccountAction={pendingAccountAction}
+                accountActionError={accountActionError}
+                onSignIn={() => {
+                  void runAccountAction('signin', onSignIn);
+                }}
+                onBilling={() => {
+                  void runAccountAction('billing', onManageBilling);
+                }}
+                onSignOut={() => {
+                  void runAccountAction('signout', onSignOut);
+                }}
+              />
             ) : null}
           </div>
         </div>
