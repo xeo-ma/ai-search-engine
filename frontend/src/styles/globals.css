@@ -93,10 +93,11 @@ main {
 }
 
 .app-shell-search {
-  flex: 1 1 auto;
+  flex: 0 1 540px;
+  width: min(100%, 540px);
   min-width: 0;
   max-width: 540px;
-  margin: 0 auto;
+  margin-inline: auto;
 }
 
 .app-shell-search .search-bar {
@@ -851,11 +852,13 @@ main {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .page-utility-menu-shell {
   position: relative;
+  display: inline-flex;
+  align-items: center;
 }
 
 .page-utility-button {
@@ -891,7 +894,7 @@ main {
   right: 0;
   z-index: 35;
   width: 280px;
-  max-width: calc(100vw - 32px);
+  max-width: min(280px, calc(100vw - 40px));
   display: grid;
   gap: 12px;
   padding: 14px;
@@ -908,7 +911,7 @@ main {
   right: 0;
   z-index: 35;
   width: 220px;
-  max-width: calc(100vw - 32px);
+  max-width: min(220px, calc(100vw - 40px));
   display: grid;
   gap: 12px;
   padding: 14px;
@@ -1328,9 +1331,9 @@ main {
 .history-panel {
   position: absolute;
   top: calc(100% + 8px);
-  right: -4px;
+  right: 0;
   z-index: 35;
-  width: min(340px, calc(100vw - 32px));
+  width: min(340px, calc(100vw - 40px));
   max-height: min(560px, calc(100vh - var(--app-shell-height) - 36px));
   display: grid;
   gap: 16px;
@@ -3071,7 +3074,7 @@ button:disabled {
   }
 
   .page-utility-actions {
-    gap: 12px;
+    gap: 10px;
   }
 
   .page-utility-bar {
@@ -3091,17 +3094,17 @@ button:disabled {
 
   .settings-menu {
     width: 260px;
-    max-width: calc(100vw - 24px);
+    max-width: min(260px, calc(100vw - 28px));
   }
 
   .account-menu {
     width: 220px;
-    max-width: calc(100vw - 24px);
+    max-width: min(220px, calc(100vw - 28px));
   }
 
   .history-panel {
     right: 0;
-    width: min(320px, calc(100vw - 24px));
+    width: min(320px, calc(100vw - 28px));
     max-height: min(520px, calc(100vh - var(--app-shell-height) - 24px));
     padding: 14px;
   }
@@ -3151,6 +3154,11 @@ button:disabled {
   .app-shell-search .search-bar {
     flex-direction: row;
     gap: 8px;
+  }
+
+  .app-shell-search {
+    flex-basis: min(100%, 440px);
+    max-width: 440px;
   }
 
   .app-shell-search .search-bar-compact {
@@ -3387,7 +3395,7 @@ button:disabled {
   }
 
   .history-panel {
-    right: -4px;
+    right: 0;
     width: min(280px, calc(100vw - 20px));
     max-height: min(480px, calc(100vh - var(--app-shell-height) - 18px));
     padding: 12px;
