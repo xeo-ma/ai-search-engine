@@ -888,9 +888,10 @@ main {
 .settings-menu {
   position: absolute;
   top: calc(100% + 8px);
-  right: -4px;
+  right: 0;
   z-index: 35;
-  width: min(280px, calc(100vw - 32px));
+  width: 280px;
+  max-width: calc(100vw - 32px);
   display: grid;
   gap: 12px;
   padding: 14px;
@@ -906,9 +907,10 @@ main {
 .account-menu {
   position: absolute;
   top: calc(100% + 8px);
-  right: -4px;
+  right: 0;
   z-index: 35;
-  width: min(220px, calc(100vw - 32px));
+  width: 220px;
+  max-width: calc(100vw - 32px);
   display: grid;
   gap: 12px;
   padding: 14px;
@@ -3089,11 +3091,13 @@ button:disabled {
   }
 
   .settings-menu {
-    width: min(260px, calc(100vw - 24px));
+    width: 260px;
+    max-width: calc(100vw - 24px);
   }
 
   .account-menu {
-    width: min(220px, calc(100vw - 24px));
+    width: 220px;
+    max-width: calc(100vw - 24px);
   }
 
   .history-panel {
