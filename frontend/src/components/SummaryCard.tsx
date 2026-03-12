@@ -54,13 +54,7 @@ export function SummaryCard({ summary, sources, claims = [], trace = null }: Sum
   const hasEvidenceFallback = !hasClaims && sources.length > 0;
   const canShowEvidence = hasClaims || hasEvidenceFallback;
   const { primary, meta } = splitSummaryMetaInsight(summary);
-  const evidenceToggleLabel = hasClaims
-    ? showEvidence
-      ? 'Hide evidence'
-      : 'Show evidence'
-    : showEvidence
-      ? 'Hide sources'
-      : 'Show sources';
+  const evidenceToggleLabel = showEvidence ? 'Hide evidence' : 'Show evidence';
 
   return (
     <section className="card stack">

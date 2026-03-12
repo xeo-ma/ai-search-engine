@@ -113,14 +113,14 @@ describe('SummaryCard', () => {
     expect(summaryCard).not.toBeNull();
     const scoped = within(summaryCard as HTMLElement);
 
-    fireEvent.click(scoped.getByRole('button', { name: 'Show sources' }));
+    fireEvent.click(scoped.getByRole('button', { name: 'Show evidence' }));
     expect(scoped.getByText('Key sources behind this summary')).toBeInTheDocument();
     expect(scoped.getByRole('link', { name: 'Physics | Britannica' })).toHaveAttribute(
       'href',
       'https://www.britannica.com/science/physics-science',
     );
     expect(scoped.queryByText('Sources')).not.toBeInTheDocument();
-    expect(scoped.getByRole('button', { name: 'Hide sources' })).toBeInTheDocument();
+    expect(scoped.getByRole('button', { name: 'Hide evidence' })).toBeInTheDocument();
   });
 
   it('hides bottom sources while evidence is expanded', () => {

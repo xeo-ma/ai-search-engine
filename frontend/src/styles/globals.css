@@ -2412,12 +2412,13 @@ button:disabled {
   gap: 10px;
   padding-left: 14px;
   border-left: 3px solid #d4ddea;
+  border-radius: 4px 0 0 4px;
 }
 
 .source-grounding-label {
   margin: 0;
-  color: #66768d;
-  font-size: 0.72rem;
+  color: #718198;
+  font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -2477,13 +2478,13 @@ button:disabled {
 }
 
 .evidence-list {
-  gap: 10px;
+  gap: 16px;
 }
 
 .evidence-item {
   display: grid;
-  gap: 4px;
-  padding-top: 8px;
+  gap: 6px;
+  padding-top: 12px;
   border-top: 1px solid #eef3f9;
 }
 
