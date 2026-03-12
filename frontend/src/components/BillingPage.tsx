@@ -225,7 +225,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
                 <h2>Upgrade to Pro</h2>
               </div>
             </div>
-            <p className="billing-card-copy">Use Express Checkout for Apple Pay, Google Pay, or Link when available, or complete the standard payment form below.</p>
+            <p className="billing-card-copy">Use available wallet options when offered, or choose a standard payment method below.</p>
             {checkoutStatus === 'loading' ? (
               <div className="billing-checkout-loading" aria-live="polite">
                 <div className="billing-loading-line billing-loading-line-title" />
