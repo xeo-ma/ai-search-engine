@@ -8,11 +8,22 @@ import { EvidenceItem } from './EvidenceItem';
 import { SummarySourceList } from './SummarySourceList';
 import { SystemTracePanel, type SystemTraceData } from './SystemTracePanel';
 
+const FALLBACK_FAVICON_PATH = '/favicon-fallback.svg';
+
 interface SummaryCardProps {
   summary: string;
   sources: SummarySourceLink[];
   claims?: SummaryClaim[];
   trace?: SystemTraceData | null;
+}
+
+function buildFaviconUrl(sourceUrl: string): string {
+  try {
+    const hostname = new URL(sourceUrl).hostname;
+    return `https://${hostname}/favicon.ico`;
+  } catch {
+    return FALLBACK_FAVICON_PATH;
+  }
 }
 
 function splitSummaryMetaInsight(summary: string): { primary: string; meta: string | null } {
@@ -53,6 +64,53 @@ export function SummaryCard({ summary, sources, claims = [], trace = null }: Sum
 
   return (
     <section className="card stack">
+      {!showEvidence && sources.length > 0 ? (
+        <section className="summary-top-sources" aria-label="Top sources">
+          <p className="summary-top-sources-label">Top sources</p>
+          <div className="summary-top-sources-rail">
+            {sources.slice(0, 3).map((source) => {
+              const domain = source.domain?.trim() || (() => {
+                try {
+                  return new URL(source.url).hostname;
+                } catch {
+                  return source.url;
+                }
+              })();
+
+              return (
+                <a
+                  key={source.url}
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="summary-top-source-chip"
+                  aria-label={domain}
+                >
+                  <img
+                    src={buildFaviconUrl(source.url)}
+                    alt=""
+                    width={14}
+                    height={14}
+                    className="summary-top-source-favicon"
+                    loading="eager"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                    onError={(event) => {
+                      const image = event.currentTarget;
+                      if (image.dataset.fallbackApplied === 'true') {
+                        return;
+                      }
+                      image.dataset.fallbackApplied = 'true';
+                      image.src = FALLBACK_FAVICON_PATH;
+                    }}
+                  />
+                  <span className="summary-top-source-domain">{domain}</span>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
       <h2>Summary</h2>
       <div className="stack summary-copy">
         <p className="summary-text">{primary}</p>

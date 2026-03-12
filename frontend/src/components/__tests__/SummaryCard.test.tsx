@@ -42,9 +42,10 @@ describe('SummaryCard', () => {
     );
 
     expect(screen.getByText('Summary')).toBeInTheDocument();
+    expect(screen.getByText('Top sources')).toBeInTheDocument();
     expect(screen.getByText('The Moon influences tides and planetary stability.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'NASA Moon Overview' })).toHaveAttribute('href', 'https://www.nasa.gov/moon');
-    expect(screen.getByRole('link', { name: 'Britannica Moon' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'www.nasa.gov' })).toHaveAttribute('href', 'https://www.nasa.gov/moon');
+    expect(screen.getByRole('link', { name: 'www.britannica.com' })).toHaveAttribute(
       'href',
       'https://www.britannica.com/science/Moon',
     );
