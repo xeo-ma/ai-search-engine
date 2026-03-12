@@ -8,6 +8,7 @@ export interface SearchHistoryEntry {
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 export type PlanPreference = 'free' | 'pro';
+type AppUtilitiesContext = 'landing' | 'results' | 'shell';
 
 interface AppUtilitiesProps {
   historyItems: SearchHistoryEntry[];
@@ -29,7 +30,7 @@ interface AppUtilitiesProps {
   onSafeModeChange: (safeMode: boolean) => void;
   themePreference: ThemePreference;
   onThemeChange: (theme: ThemePreference) => void;
-  context?: 'landing' | 'results';
+  context?: AppUtilitiesContext;
 }
 
 interface HistoryGroup {
@@ -158,7 +159,7 @@ export function AppUtilities({
   onSafeModeChange,
   themePreference,
   onThemeChange,
-  context = 'landing',
+  context = 'shell',
 }: AppUtilitiesProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -171,7 +172,7 @@ export function AppUtilities({
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent): void {
-      if (!showSettings || showClearHistoryConfirm) {
+      if ((!showSettings && !showHistory) || showClearHistoryConfirm) {
         return;
       }
 
@@ -201,7 +202,7 @@ export function AppUtilities({
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [showClearHistoryConfirm, showSettings]);
+  }, [showClearHistoryConfirm, showHistory, showSettings]);
 
   useEffect(() => {
     if (!showClearHistoryConfirm) {
@@ -230,35 +231,29 @@ export function AppUtilities({
 
   return (
     <>
-      {!showHistory ? (
-        <div className={`page-utility-bar page-utility-bar-${context}`}>
-          <div className="page-utility-actions">
+      <div className={`page-utility-bar page-utility-bar-${context}`}>
+        <div className="page-utility-actions">
+          <div className="page-utility-menu-shell" ref={settingsRef}>
             <button
               type="button"
               className="page-utility-button"
-              aria-label="Open search history"
+              aria-label="Open settings"
+              aria-expanded={showSettings || showHistory}
               onClick={() => {
-                setShowHistory(true);
-                setShowSettings(false);
+                if (showHistory) {
+                  setShowHistory(false);
+                  setShowSettings(true);
+                  return;
+                }
+
+                setShowSettings((current) => !current);
+                setShowHistory(false);
               }}
             >
-              <HistoryIcon />
+              <SettingsIcon />
             </button>
-            <div className="page-utility-menu-shell" ref={settingsRef}>
-              <button
-                type="button"
-                className="page-utility-button"
-                aria-label="Open settings"
-                aria-expanded={showSettings}
-                onClick={() => {
-                  setShowSettings((current) => !current);
-                  setShowHistory(false);
-                }}
-              >
-                <SettingsIcon />
-              </button>
-              {showSettings ? (
-                <div className="settings-menu" role="menu" aria-label="Settings menu">
+            {showSettings ? (
+              <div className="settings-menu" role="menu" aria-label="Settings menu">
                   <div className="settings-menu-section">
                     <p className="settings-menu-label">Appearance</p>
                     <div className="settings-theme-control" role="group" aria-label="Appearance">
@@ -395,6 +390,22 @@ export function AppUtilities({
                     </div>
                   </div>
                   <div className="settings-menu-section">
+                    <p className="settings-menu-label">Library</p>
+                    <button
+                      type="button"
+                      className="settings-menu-neutral-action"
+                      onClick={() => {
+                        setShowSettings(false);
+                        setShowHistory(true);
+                      }}
+                    >
+                      <span className="settings-menu-action-icon" aria-hidden="true">
+                        <HistoryIcon />
+                      </span>
+                      Search history
+                    </button>
+                  </div>
+                  <div className="settings-menu-section">
                     <p className="settings-menu-label">Data</p>
                     {authenticated ? (
                       <button
@@ -419,72 +430,75 @@ export function AppUtilities({
                       Clear history
                     </button>
                   </div>
+              </div>
+            ) : null}
+
+            {showHistory ? (
+              <div className="history-panel" role="dialog" aria-label="Search history">
+                <div className="history-panel-header">
+                  <div className="stack history-panel-copy">
+                    <p className="history-panel-eyebrow">History</p>
+                    <h2>Recent searches</h2>
+                  </div>
+                  <div className="history-panel-actions">
+                    <button
+                      type="button"
+                      className="history-panel-back"
+                      onClick={() => {
+                        setShowHistory(false);
+                        setShowSettings(true);
+                      }}
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      className="history-panel-close"
+                      aria-label="Close search history"
+                      onClick={() => setShowHistory(false)}
+                    >
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  </div>
                 </div>
-              ) : null}
-            </div>
+
+                {historyGroups.length === 0 ? (
+                  <div className="stack history-panel-empty-state">
+                    <div className="history-panel-empty-icon">
+                      <EmptyHistoryIcon />
+                    </div>
+                    <p className="muted history-panel-empty">No searches saved yet.</p>
+                  </div>
+                ) : (
+                  <div className="stack history-groups">
+                    {historyGroups.map((group) => (
+                      <section key={group.label} className="stack history-group">
+                        <p className="history-group-label">{group.label}</p>
+                        <div className="stack history-group-list">
+                          {group.items.map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              className="history-item"
+                              onClick={() => {
+                                onRunHistory(item.query);
+                                setShowHistory(false);
+                              }}
+                            >
+                              <span className="history-item-query">{item.query}</span>
+                              <span className="history-item-time">{formatHistoryTimestamp(item.lastSearchedAt)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
-      ) : null}
-
-      {showHistory ? (
-        <>
-          <button
-            type="button"
-            className="history-drawer-backdrop"
-            aria-label="Close search history"
-            onClick={() => setShowHistory(false)}
-          />
-          <aside className="history-drawer" role="dialog" aria-modal="true" aria-label="Search history">
-            <div className="history-drawer-header">
-              <div className="stack history-drawer-copy">
-                <p className="history-drawer-eyebrow">History</p>
-                <h2>Recent searches</h2>
-              </div>
-              <button
-                type="button"
-                className="history-drawer-close"
-                aria-label="Close search history"
-                onClick={() => setShowHistory(false)}
-              >
-                <span aria-hidden="true">×</span>
-              </button>
-            </div>
-
-            {historyGroups.length === 0 ? (
-              <div className="stack history-drawer-empty-state">
-                <div className="history-drawer-empty-icon">
-                  <EmptyHistoryIcon />
-                </div>
-                <p className="muted history-drawer-empty">No searches saved yet.</p>
-              </div>
-            ) : (
-              <div className="stack history-groups">
-                {historyGroups.map((group) => (
-                  <section key={group.label} className="stack history-group">
-                    <p className="history-group-label">{group.label}</p>
-                    <div className="stack history-group-list">
-                      {group.items.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className="history-item"
-                          onClick={() => {
-                            onRunHistory(item.query);
-                            setShowHistory(false);
-                          }}
-                        >
-                          <span className="history-item-query">{item.query}</span>
-                          <span className="history-item-time">{formatHistoryTimestamp(item.lastSearchedAt)}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                ))}
-              </div>
-            )}
-          </aside>
-        </>
-      ) : null}
+      </div>
 
       {showClearHistoryConfirm ? (
         <>

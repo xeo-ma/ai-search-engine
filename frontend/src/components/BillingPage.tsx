@@ -161,7 +161,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
           </Link>
           <p className="billing-eyebrow">Billing</p>
           <h1>Subscription and billing</h1>
-          <p className="billing-subcopy">Manage Free vs Pro access with Stripe-backed billing while keeping subscription state synced through webhooks.</p>
+          <p className="billing-subcopy">Manage your subscription, upgrade your plan, and securely update your payment details.</p>
         </header>
 
         {statusMessage ? <div className="billing-status-banner">{statusMessage}</div> : null}
@@ -173,7 +173,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
                 <p className="billing-card-label">Current plan</p>
                 <h2>{isPro ? 'Pro' : 'Free'}</h2>
               </div>
-              <span className={`billing-plan-pill${isPro ? ' is-pro' : ''}`}>{isPro ? 'Active' : 'Standard'}</span>
+              <span className={`billing-plan-pill${isPro ? ' is-pro' : ''}`}>{isPro ? 'Active' : 'Current Plan'}</span>
             </div>
             <p className="billing-card-copy">
               {isAuthenticated
@@ -202,7 +202,10 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
             <div className="billing-card-header">
               <div>
                 <p className="billing-card-label">Pro monthly</p>
-                <h2>$20<span>/month</span></h2>
+                <div className="billing-price-lockup">
+                  <h2>$20</h2>
+                  <span>/month</span>
+                </div>
               </div>
             </div>
             <ul className="billing-benefits">
@@ -243,12 +246,11 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
         ) : null}
 
         {isAuthenticated ? (
-          <section className="billing-card billing-note-card">
-            <p className="billing-card-copy">Subscription state remains webhook-driven. This page only initializes payment and opens the customer portal; entitlement updates continue to come from Stripe webhook events.</p>
+          <div className="billing-account-actions">
             <button type="button" className="billing-tertiary-button" onClick={() => void signOut({ callbackUrl: '/' })}>
               Sign out
             </button>
-          </section>
+          </div>
         ) : null}
       </section>
     </main>

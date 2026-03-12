@@ -636,6 +636,32 @@ export default function SearchPage() {
       }
     : null;
 
+  const sharedUtilityProps = {
+    historyItems: searchHistory,
+    onRunHistory: (historyQuery: string) => {
+      void onSearch(historyQuery);
+    },
+    onClearHistory: () => {
+      setSearchHistory([]);
+    },
+    authenticated: accountState.authenticated,
+    plan,
+    planMessage,
+    email: accountState.email,
+    deepSearchEnabled,
+    deepSearchAvailable: accountState.deepSearchAvailable,
+    onDeepSearchChange: handleDeepSearchChange,
+    freeSearchesRemaining,
+    onSignIn: handleSignIn,
+    onSignOut: handleSignOut,
+    onUpgradeToPro: handleUpgradeToPro,
+    onManageBilling: handleManageBilling,
+    safeMode,
+    onSafeModeChange: handleSafeModeChange,
+    themePreference,
+    onThemeChange: setThemePreference,
+  } as const;
+
   useEffect(() => {
     setSearchHistory(readStoredHistory());
     setSafeMode(readStoredSafeMode());
@@ -788,49 +814,33 @@ export default function SearchPage() {
   }
 
   return (
-    <main className={isResultsView ? 'stack results-layout' : 'stack landing-layout'}>
-      {isResultsView && showStickySearch ? (
-        <div className="sticky-search-shell" role="search" aria-label="Sticky search">
-          <div className="sticky-search-bar">
-            <SearchBar
-              value={query}
-              onChange={setQuery}
-              onSubmit={onSearch}
-              loading={resultsLoading}
-              compact
-            />
-          </div>
+    <>
+      <header className="app-shell-bar">
+        <div className={`app-shell-inner${isResultsView && showStickySearch ? ' app-shell-inner-with-search' : ''}`}>
+          <a href="/" className="app-shell-brand" aria-label="Go to search home">
+            <span className="app-shell-brand-mark" aria-hidden="true">
+              S
+            </span>
+            <span className="app-shell-brand-text">Search</span>
+          </a>
+          {isResultsView && showStickySearch ? (
+            <div className="app-shell-search" role="search" aria-label="Sticky search">
+              <SearchBar
+                value={query}
+                onChange={setQuery}
+                onSubmit={onSearch}
+                loading={resultsLoading}
+                compact
+              />
+            </div>
+          ) : null}
+          <AppUtilities context="shell" {...sharedUtilityProps} />
         </div>
-      ) : null}
+      </header>
+      <main className={`${isResultsView ? 'stack results-layout' : 'stack landing-layout'} app-shell-content`}>
       {!isResultsView ? (
         <section className="landing-search">
           <div className="landing-hero stack">
-            <AppUtilities
-              context="landing"
-              historyItems={searchHistory}
-              onRunHistory={(historyQuery) => {
-                void onSearch(historyQuery);
-              }}
-              onClearHistory={() => {
-                setSearchHistory([]);
-              }}
-              authenticated={accountState.authenticated}
-              plan={plan}
-              planMessage={planMessage}
-              email={accountState.email}
-              deepSearchEnabled={deepSearchEnabled}
-              deepSearchAvailable={accountState.deepSearchAvailable}
-              onDeepSearchChange={handleDeepSearchChange}
-              freeSearchesRemaining={freeSearchesRemaining}
-              onSignIn={handleSignIn}
-              onSignOut={handleSignOut}
-              onUpgradeToPro={handleUpgradeToPro}
-              onManageBilling={handleManageBilling}
-              safeMode={safeMode}
-              onSafeModeChange={handleSafeModeChange}
-              themePreference={themePreference}
-              onThemeChange={setThemePreference}
-            />
             <p className="landing-eyebrow">Verifiable search engine</p>
             <div className="stack landing-copy">
               <h1>Search with evidence</h1>
@@ -866,32 +876,6 @@ export default function SearchPage() {
         </section>
       ) : (
         <>
-            <AppUtilities
-              context="results"
-              historyItems={searchHistory}
-            onRunHistory={(historyQuery) => {
-              void onSearch(historyQuery);
-            }}
-              onClearHistory={() => {
-                setSearchHistory([]);
-              }}
-              authenticated={accountState.authenticated}
-              plan={plan}
-              planMessage={planMessage}
-              email={accountState.email}
-              deepSearchEnabled={deepSearchEnabled}
-              deepSearchAvailable={accountState.deepSearchAvailable}
-              onDeepSearchChange={handleDeepSearchChange}
-              freeSearchesRemaining={freeSearchesRemaining}
-              onSignIn={handleSignIn}
-              onSignOut={handleSignOut}
-              onUpgradeToPro={handleUpgradeToPro}
-              onManageBilling={handleManageBilling}
-              safeMode={safeMode}
-            onSafeModeChange={handleSafeModeChange}
-            themePreference={themePreference}
-            onThemeChange={setThemePreference}
-          />
           <section ref={searchHeaderRef} className="card stack search-header-card">
             <SearchBar
               value={query}
@@ -980,6 +964,7 @@ export default function SearchPage() {
           {hasLoadedResults && loadMoreError ? <p className="error">{loadMoreError}</p> : null}
         </>
       )}
-    </main>
+      </main>
+    </>
   );
 }
