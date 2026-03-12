@@ -295,6 +295,13 @@ main {
   gap: 12px;
 }
 
+.billing-wallet-note {
+  margin: 0;
+  color: #6e7f95;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .billing-divider {
   position: relative;
   display: flex;
@@ -1536,7 +1543,8 @@ main {
 :root[data-theme='dark'] .billing-card-copy,
 :root[data-theme='dark'] .billing-card-meta,
 :root[data-theme='dark'] .billing-status-banner,
-:root[data-theme='dark'] .billing-divider {
+:root[data-theme='dark'] .billing-divider,
+:root[data-theme='dark'] .billing-wallet-note {
   color: #95a7bc;
 }
 

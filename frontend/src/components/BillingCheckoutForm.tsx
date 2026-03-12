@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { CheckoutProvider, ExpressCheckoutElement, PaymentElement, useCheckout } from '@stripe/react-stripe-js/checkout';
 import { loadStripe } from '@stripe/stripe-js';
+import type { StripeExpressCheckoutElementReadyEvent } from '@stripe/stripe-js';
 
 interface BillingCheckoutFormProps {
   clientSecret: string;
@@ -30,6 +31,7 @@ function BillingCheckoutContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [walletError, setWalletError] = useState<string | null>(null);
+  const [hasWallets, setHasWallets] = useState(true);
 
   async function handleMainSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -83,6 +85,10 @@ function BillingCheckoutContent() {
     }
   }
 
+  function handleExpressReady(event: StripeExpressCheckoutElementReadyEvent) {
+    setHasWallets(Boolean(event.availablePaymentMethods));
+  }
+
   if (checkoutState.type === 'loading') {
     return (
       <div className="billing-checkout-loading" aria-live="polite">
@@ -99,12 +105,35 @@ function BillingCheckoutContent() {
 
   return (
     <form className="billing-checkout-form" onSubmit={(event) => void handleMainSubmit(event)}>
-      <div className="billing-wallet-section">
-        <ExpressCheckoutElement
-          onConfirm={(event) => void handleExpressConfirm(event)}
-        />
-        {walletError ? <p className="billing-checkout-error">{walletError}</p> : null}
-      </div>
+      {hasWallets ? (
+        <div className="billing-wallet-section">
+          <ExpressCheckoutElement
+            options={{
+              buttonHeight: 48,
+              paymentMethodOrder: ['apple_pay', 'link'],
+              buttonType: {
+                applePay: 'subscribe',
+              },
+              buttonTheme: {
+                applePay: 'black',
+              },
+              paymentMethods: {
+                applePay: 'always',
+              },
+              layout: {
+                maxColumns: 1,
+                maxRows: 2,
+                overflow: 'never',
+              },
+            }}
+            onReady={handleExpressReady}
+            onConfirm={(event) => void handleExpressConfirm(event)}
+          />
+          {walletError ? <p className="billing-checkout-error">{walletError}</p> : null}
+        </div>
+      ) : (
+        <p className="billing-wallet-note">Apple Pay, Google Pay, and Link appear automatically when they are available on this device and domain.</p>
+      )}
 
       <div className="billing-divider">
         <span>Or pay with card</span>
