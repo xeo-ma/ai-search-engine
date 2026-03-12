@@ -897,10 +897,8 @@ main {
   padding: 14px;
   border: 1px solid rgba(220, 229, 239, 0.94);
   border-radius: 14px;
-  background: rgba(252, 253, 255, 0.88);
+  background: #fcfdff;
   box-shadow: -10px 0 25px rgba(23, 33, 47, 0.06), 0 20px 40px rgba(23, 33, 47, 0.14);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   text-align: left;
 }
 
@@ -1514,6 +1512,7 @@ main {
 }
 
 :root[data-theme='dark'] .settings-menu {
+  background: #0b1017;
   box-shadow: -10px 0 28px rgba(0, 0, 0, 0.28), 0 24px 48px rgba(0, 0, 0, 0.34);
 }
 
