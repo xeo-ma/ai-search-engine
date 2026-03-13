@@ -13,8 +13,8 @@ interface BillingPageProps {
 }
 
 const PRO_BENEFITS = [
-  'Broader candidate gathering before ranking on difficult queries',
-  'Deep search preference synced to your account',
+  'Deep search for broader retrieval on difficult queries',
+  'Sync preferences across your devices',
   'Managed billing and invoice history through Stripe',
 ];
 
@@ -214,9 +214,6 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
                 <li key={benefit}>{benefit}</li>
               ))}
             </ul>
-            <p className="billing-card-copy">
-              Pro is intended for queries that benefit from a broader retrieval pass before the final ranking and summary.
-            </p>
             {isAuthenticated && isFree ? <p className="billing-card-meta">Upgrade in-app with wallet support or the standard payment form below.</p> : null}
           </article>
         </div>
