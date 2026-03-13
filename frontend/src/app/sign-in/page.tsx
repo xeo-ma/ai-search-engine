@@ -4,11 +4,13 @@ import { SignInForm } from '../../components/SignInForm';
 interface SignInPageProps {
   searchParams?: {
     callbackUrl?: string;
+    email?: string;
   };
 }
 
 export default function SignInPage({ searchParams }: SignInPageProps) {
   const callbackUrl = searchParams?.callbackUrl || '/';
+  const initialEmail = searchParams?.email ?? '';
 
   return (
     <AuthShell
@@ -16,7 +18,7 @@ export default function SignInPage({ searchParams }: SignInPageProps) {
       title="Sign in"
       description="Access your saved account state, billing, and deep search settings."
     >
-      <SignInForm callbackUrl={callbackUrl} />
+      <SignInForm callbackUrl={callbackUrl} initialEmail={initialEmail} />
     </AuthShell>
   );
 }

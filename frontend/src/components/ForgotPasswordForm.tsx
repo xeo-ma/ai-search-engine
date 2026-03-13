@@ -3,8 +3,12 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
-export function ForgotPasswordForm() {
-  const [email, setEmail] = useState('');
+interface ForgotPasswordFormProps {
+  initialEmail?: string;
+}
+
+export function ForgotPasswordForm({ initialEmail = '' }: ForgotPasswordFormProps) {
+  const [email, setEmail] = useState(initialEmail);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,7 +70,7 @@ export function ForgotPasswordForm() {
       </form>
 
       <div className="auth-inline-links">
-        <Link href="/sign-in">Back to sign in</Link>
+        <Link href={email.trim() ? `/sign-in?email=${encodeURIComponent(email.trim())}` : '/sign-in'}>Back to sign in</Link>
       </div>
     </div>
   );

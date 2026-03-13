@@ -8,6 +8,7 @@ type SignInMode = 'password' | 'magic';
 
 interface SignInFormProps {
   callbackUrl: string;
+  initialEmail?: string;
 }
 
 function EyeIcon({ hidden = false }: { hidden?: boolean }) {
@@ -20,9 +21,9 @@ function EyeIcon({ hidden = false }: { hidden?: boolean }) {
   );
 }
 
-export function SignInForm({ callbackUrl }: SignInFormProps) {
+export function SignInForm({ callbackUrl, initialEmail = '' }: SignInFormProps) {
   const [mode, setMode] = useState<SignInMode>('password');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const passwordInputRef = useRef<HTMLInputElement>(null);
@@ -140,7 +141,9 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
           <label className="auth-field">
             <span className="auth-field-header">
               <span>Password</span>
-              <Link href="/forgot-password">Forgot password?</Link>
+              <Link href={email.trim() ? `/forgot-password?email=${encodeURIComponent(email.trim())}` : '/forgot-password'}>
+                Forgot password?
+              </Link>
             </span>
             <span className="auth-input-shell">
               <input
