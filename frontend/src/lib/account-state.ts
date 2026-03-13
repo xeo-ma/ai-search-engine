@@ -7,6 +7,9 @@ export interface SearchAccountState {
   userId: string | null;
   email: string | null;
   plan: 'free' | 'pro';
+  subscriptionStatus: string | null;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
   deepSearchAvailable: boolean;
   deepSearchEnabled: boolean;
   safeMode: boolean;
@@ -24,6 +27,9 @@ export async function getSearchAccountState(userId: string | null | undefined): 
       userId: null,
       email: null,
       plan: 'free',
+      subscriptionStatus: null,
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: null,
       deepSearchAvailable: false,
       deepSearchEnabled: false,
       safeMode: true,
@@ -62,6 +68,13 @@ export async function getSearchAccountState(userId: string | null | undefined): 
             deepSearchAvailable: true,
           },
         },
+        subscription: {
+          select: {
+            status: true,
+            cancelAtPeriodEnd: true,
+            currentPeriodEnd: true,
+          },
+        },
         preference: {
           select: {
             deepSearchEnabled: true,
@@ -92,6 +105,9 @@ export async function getSearchAccountState(userId: string | null | undefined): 
     userId,
     email: user?.email ?? null,
     plan,
+    subscriptionStatus: user?.subscription?.status ?? null,
+    cancelAtPeriodEnd: user?.subscription?.cancelAtPeriodEnd ?? false,
+    currentPeriodEnd: user?.subscription?.currentPeriodEnd?.toISOString() ?? null,
     deepSearchAvailable: Boolean(user?.entitlement?.deepSearchAvailable),
     deepSearchEnabled: Boolean(user?.preference?.deepSearchEnabled),
     safeMode: user?.preference?.safeMode ?? true,

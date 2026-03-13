@@ -18,6 +18,23 @@ const PRO_BENEFITS = [
   'Managed billing and invoice history through Stripe',
 ];
 
+function formatBillingDate(dateString: string | null): string | null {
+  if (!dateString) {
+    return null;
+  }
+
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date);
+}
+
 export function BillingPage({ initialAccountState, billingState }: BillingPageProps) {
   const [accountState, setAccountState] = useState(initialAccountState);
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
@@ -30,6 +47,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
   const isAuthenticated = accountState.authenticated;
   const isPro = accountState.plan === 'pro';
   const isFree = accountState.plan === 'free';
+  const cancellationDate = formatBillingDate(accountState.currentPeriodEnd);
   const isAwaitingProConfirmation = billingState === 'success' && isFree;
   const didConfirmationTimeout = billingState === 'success' && isFree && !isRefreshingPlan;
   const shouldShowCheckout = isAuthenticated && isFree && !isAwaitingProConfirmation;
@@ -228,6 +246,11 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
                 : 'Sign in to view or change the billing state for your account.'}
             </p>
             {isAuthenticated && accountState.email ? <p className="billing-card-meta">Signed in as {accountState.email}</p> : null}
+            {isAuthenticated && isPro && accountState.cancelAtPeriodEnd && cancellationDate ? (
+              <p className="billing-card-meta">
+                Cancellation scheduled. Pro access remains active until {cancellationDate}.
+              </p>
+            ) : null}
             {isAuthenticated && isFree && !isAwaitingProConfirmation && accountState.freeSearchesRemaining !== null ? (
               <p className="billing-card-meta">{accountState.freeSearchesRemaining} free searches remaining today.</p>
             ) : null}

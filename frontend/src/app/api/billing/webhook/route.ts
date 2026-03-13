@@ -176,6 +176,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           update: {
             status: subscription.status,
             priceId: subscription.items.data[0]?.price.id ?? null,
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
             currentPeriodEnd: toDate(subscription.items.data[0]?.current_period_end),
           },
           create: {
@@ -184,6 +185,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             stripeSubscriptionId: subscription.id,
             status: subscription.status,
             priceId: subscription.items.data[0]?.price.id ?? null,
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
             currentPeriodEnd: toDate(subscription.items.data[0]?.current_period_end),
           },
         });

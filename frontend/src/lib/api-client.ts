@@ -41,6 +41,9 @@ export interface AccountStateResponse {
   userId: string | null;
   email: string | null;
   plan: 'free' | 'pro';
+  subscriptionStatus: string | null;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
   deepSearchAvailable: boolean;
   deepSearchEnabled: boolean;
   safeMode: boolean;
