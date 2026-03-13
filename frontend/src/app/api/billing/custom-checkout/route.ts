@@ -73,7 +73,7 @@ export async function POST(): Promise<NextResponse> {
         quantity: 1,
       },
     ],
-    return_url: `${appUrl}/billing?billing=return`,
+    return_url: `${appUrl}/billing?success=true`,
     payment_method_collection: 'always',
     metadata: {
       userId,

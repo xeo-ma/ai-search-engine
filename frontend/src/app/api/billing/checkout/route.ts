@@ -63,8 +63,8 @@ export async function POST(): Promise<NextResponse> {
         quantity: 1,
       },
     ],
-    success_url: `${appUrl}/billing?billing=success`,
-    cancel_url: `${appUrl}/billing?billing=cancelled`,
+    success_url: `${appUrl}/billing?success=true`,
+    cancel_url: `${appUrl}/billing?canceled=true`,
     metadata: {
       userId,
     },

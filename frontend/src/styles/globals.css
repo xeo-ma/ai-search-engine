@@ -285,12 +285,33 @@ main {
 }
 
 .billing-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   padding: 14px 16px;
   border: 1px solid #d9e4f2;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.78);
   color: #2f4966;
   font-size: 0.94rem;
+}
+
+.billing-status-success {
+  border-color: #cfe0f6;
+  background: #f8fbff;
+}
+
+.billing-status-success strong {
+  display: block;
+  color: var(--text);
+}
+
+.billing-secondary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .billing-plan-grid {
@@ -572,6 +593,11 @@ main {
   .billing-card-header,
   .billing-section-header {
     flex-direction: column;
+  }
+
+  .billing-status-banner {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .billing-primary-button,
@@ -917,10 +943,8 @@ main {
   padding: 14px;
   border: 1px solid rgba(220, 229, 239, 0.94);
   border-radius: 14px;
-  background: rgba(252, 253, 255, 0.88);
+  background: #fcfdff;
   box-shadow: -10px 0 25px rgba(23, 33, 47, 0.06), 0 20px 40px rgba(23, 33, 47, 0.14);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   text-align: left;
 }
 
@@ -1517,6 +1541,7 @@ main {
 }
 
 :root[data-theme='dark'] .account-menu {
+  background: #0b1017;
   box-shadow: -10px 0 28px rgba(0, 0, 0, 0.28), 0 24px 48px rgba(0, 0, 0, 0.34);
 }
 
@@ -1771,6 +1796,11 @@ main {
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(13, 20, 28, 0.92);
   box-shadow: none;
+}
+
+:root[data-theme='dark'] .billing-status-success {
+  background: #101a25;
+  border-color: rgba(143, 193, 255, 0.18);
 }
 
 :root[data-theme='dark'] .billing-card-accent {
@@ -2080,7 +2110,7 @@ button {
 .landing-search .search-bar:focus-within {
   border-color: #bfd3ec;
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 20px 58px rgba(23, 33, 47, 0.06), 0 0 0 5px rgba(11, 107, 203, 0.1);
+  box-shadow: 0 18px 46px rgba(23, 33, 47, 0.045), 0 0 0 5px rgba(11, 107, 203, 0.08);
   transform: translateY(-1px);
 }
 
@@ -2099,7 +2129,7 @@ button {
 
 .landing-suggestion-label {
   margin: 0;
-  color: #5e6d84;
+  color: #7a8aa1;
   font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.04em;

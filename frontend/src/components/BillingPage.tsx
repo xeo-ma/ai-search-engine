@@ -70,7 +70,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
   }, [shouldShowCheckout]);
 
   useEffect(() => {
-    if (billingState !== 'return' || isPro) {
+    if (billingState !== 'success' || isPro) {
       return;
     }
 
@@ -116,11 +116,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
   }, [billingState, isPro]);
 
   const statusMessage = useMemo(() => {
-    if (billingState === 'return' && isPro) {
-      return 'Pro is now active. Deeper retrieval is available for harder queries.';
-    }
-
-    if (billingState === 'return' && isFree) {
+    if (billingState === 'success' && isFree) {
       return isRefreshingPlan
         ? 'Payment submitted. Waiting for subscription confirmation from billing...'
         : 'Payment was submitted, but Pro has not been confirmed yet. Refresh in a moment if needed.';
@@ -130,12 +126,8 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
       return 'Checkout was canceled. You can resume it anytime from this page.';
     }
 
-    if (billingState === 'success' && isPro) {
-      return 'Billing completed successfully.';
-    }
-
     return null;
-  }, [billingState, isFree, isPro, isRefreshingPlan]);
+  }, [billingState, isFree, isRefreshingPlan]);
 
   async function handleManageBilling() {
     setBillingActionError(null);
@@ -165,7 +157,19 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
           </p>
         </header>
 
-        {statusMessage ? <div className="billing-status-banner">{statusMessage}</div> : null}
+        {billingState === 'success' && isPro ? (
+          <div className="billing-status-banner billing-status-success">
+            <div className="stack">
+              <strong>Pro is active</strong>
+              <span>Deep Search is now available for broader retrieval on difficult queries.</span>
+            </div>
+            <Link className="billing-secondary-button billing-secondary-link" href="/">
+              Return to search
+            </Link>
+          </div>
+        ) : statusMessage ? (
+          <div className="billing-status-banner">{statusMessage}</div>
+        ) : null}
 
         <div className="billing-plan-grid">
           <article className="billing-card">

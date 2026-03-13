@@ -53,7 +53,7 @@ function BillingCheckoutContent() {
         return;
       }
 
-      window.location.assign('/billing?billing=return');
+      window.location.assign('/billing?success=true');
     } catch {
       setSubmitError('Unable to confirm subscription. Please try again.');
     } finally {
@@ -79,7 +79,7 @@ function BillingCheckoutContent() {
         return;
       }
 
-      window.location.assign('/billing?billing=return');
+      window.location.assign('/billing?success=true');
     } catch {
       setWalletError('Wallet checkout was unavailable. Try the standard payment form below.');
     }
