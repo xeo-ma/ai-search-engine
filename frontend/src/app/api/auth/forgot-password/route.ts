@@ -89,6 +89,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     await sendPasswordResetEmail({
       to: user.email,
       resetUrl,
+      expiresInMinutes: Math.round(PASSWORD_RESET_TTL_MS / 60000),
     });
 
     console.info('[auth/forgot-password] Reset email sent.', {
