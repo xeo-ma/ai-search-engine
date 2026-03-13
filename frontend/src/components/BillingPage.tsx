@@ -31,6 +31,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
   const isPro = accountState.plan === 'pro';
   const isFree = accountState.plan === 'free';
   const isAwaitingProConfirmation = billingState === 'success' && isFree;
+  const didConfirmationTimeout = billingState === 'success' && isFree && !isRefreshingPlan;
   const shouldShowCheckout = isAuthenticated && isFree && !isAwaitingProConfirmation;
 
   useEffect(() => {
@@ -116,15 +117,23 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
     };
   }, [billingState, isPro]);
 
-  const statusMessage = useMemo(() => {
+  const statusState = useMemo(() => {
     if (billingState === 'success' && isFree) {
-      return isRefreshingPlan
-        ? 'Payment submitted. Confirming Pro access now...'
-        : 'Payment was submitted, but Pro has not been confirmed yet. It should update automatically shortly.';
+      return {
+        tone: 'pending' as const,
+        title: 'Payment received',
+        message: isRefreshingPlan
+          ? 'Pro will activate automatically in a moment. You do not need to do anything else.'
+          : 'Pro has not been confirmed yet, but billing should update automatically shortly.',
+      };
     }
 
     if (billingState === 'cancelled') {
-      return 'Checkout was canceled. You can resume it anytime from this page.';
+      return {
+        tone: 'cancelled' as const,
+        title: 'Checkout canceled',
+        message: 'Nothing changed on your account. You can resume the upgrade anytime from this page.',
+      };
     }
 
     return null;
@@ -161,15 +170,41 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
         {billingState === 'success' && isPro ? (
           <div className="billing-status-banner billing-status-success">
             <div className="stack">
-              <strong>Pro is active</strong>
-              <span>Deep Search is now available for broader retrieval on difficult queries.</span>
+              <strong>Lens Pro is active</strong>
+              <span>Deep Search is now available for broader retrieval on difficult queries. You can manage billing later from this page.</span>
             </div>
-            <Link className="billing-secondary-button billing-secondary-link" href="/">
-              Return to search
-            </Link>
+            <div className="billing-status-actions">
+              <Link className="billing-secondary-button billing-secondary-link" href="/">
+                Return to search
+              </Link>
+              <button
+                type="button"
+                className="billing-secondary-button"
+                disabled={isOpeningPortal}
+                onClick={() => void handleManageBilling()}
+              >
+                {isOpeningPortal ? 'Opening portal...' : 'Manage billing'}
+              </button>
+            </div>
           </div>
-        ) : statusMessage ? (
-          <div className="billing-status-banner">{statusMessage}</div>
+        ) : statusState ? (
+          <div className={`billing-status-banner billing-status-${statusState.tone}`}>
+            <div className="stack">
+              {statusState.tone === 'pending' ? <span className="billing-status-spinner" aria-hidden="true" /> : null}
+              <strong>{statusState.title}</strong>
+              <span>{statusState.message}</span>
+              {didConfirmationTimeout ? (
+                <span className="billing-status-hint">If this takes longer than expected, return to search and check back in a moment.</span>
+              ) : null}
+            </div>
+            {statusState.tone === 'pending' ? (
+              <div className="billing-status-actions">
+                <Link className="billing-secondary-button billing-secondary-link" href="/">
+                  Return to search
+                </Link>
+              </div>
+            ) : null}
+          </div>
         ) : null}
 
         <div className="billing-plan-grid">

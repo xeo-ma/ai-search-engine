@@ -132,7 +132,7 @@ function BillingCheckoutContent() {
           {walletError ? <p className="billing-checkout-error">{walletError}</p> : null}
         </div>
       ) : (
-        <p className="billing-wallet-note">Apple Pay, Google Pay, and Link appear automatically when they are available on this device and domain.</p>
+        <p className="billing-wallet-note">Apple Pay or Link appear automatically when this device and domain support them.</p>
       )}
 
       <div className="billing-divider">
