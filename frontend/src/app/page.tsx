@@ -817,11 +817,11 @@ export default function SearchPage() {
     <>
       <header className="app-shell-bar">
         <div className={`app-shell-inner${isResultsView && showStickySearch ? ' app-shell-inner-with-search' : ''}`}>
-          <a href="/" className="app-shell-brand" aria-label="Go to search home">
+          <a href="/" className="app-shell-brand" aria-label="Go to Lens home">
             <span className="app-shell-brand-mark" aria-hidden="true">
-              S
+              L
             </span>
-            <span className="app-shell-brand-text">Search</span>
+            <span className="app-shell-brand-text">Lens</span>
           </a>
           {isResultsView && showStickySearch ? (
             <div className="app-shell-search" role="search" aria-label="Sticky search">
