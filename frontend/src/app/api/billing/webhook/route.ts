@@ -59,8 +59,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       const subscription = event.data.object as Stripe.Subscription;
       const stripeCustomerId =
         typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+      const metadataUserId = subscription.metadata?.userId;
 
-      const user = await prisma.user.findFirst({
+      let user = await prisma.user.findFirst({
         where: {
           stripeCustomerId,
         },
@@ -68,6 +69,26 @@ export async function POST(request: Request): Promise<NextResponse> {
           id: true,
         },
       });
+
+      if (!user && metadataUserId) {
+        user = await prisma.user.findUnique({
+          where: {
+            id: metadataUserId,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        if (user) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              stripeCustomerId,
+            },
+          });
+        }
+      }
 
       if (!user) {
         break;

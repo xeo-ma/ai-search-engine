@@ -79,7 +79,7 @@ describe('auth and billing flows', () => {
     vi.clearAllMocks();
     process.env.STRIPE_PRO_PRICE_ID = 'price_test_123';
     process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_123';
-    process.env.NEXT_PUBLIC_APP_URL = 'https://ai-search.xeo-ma.com';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://www.lensquery.com';
   });
 
   it('signs up a user with a hashed password and default entitlement state', async () => {
@@ -311,6 +311,63 @@ describe('auth and billing flows', () => {
     );
 
     expect(response.status).toBe(200);
+    expect(prismaMock.entitlement.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'user_123' },
+        update: {
+          plan: 'pro',
+          deepSearchAvailable: true,
+        },
+      }),
+    );
+  });
+
+  it('falls back to subscription metadata userId when stripeCustomerId has not been written yet', async () => {
+    stripeMock.webhooks.constructEvent.mockReturnValue({
+      type: 'customer.subscription.created',
+      data: {
+        object: {
+          id: 'sub_123',
+          customer: 'cus_123',
+          status: 'active',
+          metadata: {
+            userId: 'user_123',
+          },
+          items: {
+            data: [
+              {
+                price: { id: 'price_test_123' },
+                current_period_end: 1_800_000_000,
+              },
+            ],
+          },
+        },
+      },
+    });
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.findUnique.mockResolvedValue({ id: 'user_123' });
+    prismaMock.user.update.mockResolvedValue({ id: 'user_123', stripeCustomerId: 'cus_123' });
+    prismaMock.subscription.upsert.mockResolvedValue({ id: 'sub_record' });
+    prismaMock.entitlement.upsert.mockResolvedValue({ id: 'entitlement_123' });
+
+    const { POST } = await import('../../billing/webhook/route');
+    const response = await POST(
+      new Request('http://localhost/api/billing/webhook', {
+        method: 'POST',
+        headers: {
+          'stripe-signature': 'signature',
+        },
+        body: JSON.stringify({ fake: true }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'user_123' },
+        data: { stripeCustomerId: 'cus_123' },
+      }),
+    );
     expect(prismaMock.entitlement.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { userId: 'user_123' },
