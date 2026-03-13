@@ -53,7 +53,7 @@ describe('SummaryCard', () => {
     expect(screen.getByText('System trace')).toBeInTheDocument();
     expect(screen.getByText('moon')).toBeInTheDocument();
     expect(screen.getByText('definition')).toBeInTheDocument();
-    expect(screen.getByText(/Deep search unavailable/)).toBeInTheDocument();
+    expect(screen.getByText(/Unavailable on the current plan/)).toBeInTheDocument();
     expect(screen.getByText(/Quality reranking applied/)).toBeInTheDocument();
   });
 

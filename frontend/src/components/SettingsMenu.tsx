@@ -85,9 +85,11 @@ export function SettingsMenu({
                   </span>
                 </button>
               </div>
-              <p className="settings-menu-help">Extends retrieval depth before reranking.</p>
+              <p className="settings-menu-help">Gathers a broader candidate set before reranking on harder queries.</p>
             </>
-          ) : null}
+          ) : (
+            <p className="settings-menu-help">Deep search is available on Pro for queries that need broader retrieval.</p>
+          )}
         </div>
       </div>
       <div className="settings-menu-section">

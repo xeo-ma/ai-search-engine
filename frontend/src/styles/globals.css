@@ -1512,6 +1512,10 @@ main {
   box-shadow: -10px 0 28px rgba(0, 0, 0, 0.28), 0 24px 48px rgba(0, 0, 0, 0.34);
 }
 
+:root[data-theme='dark'] .results-capability-note a {
+  color: #8fc1ff;
+}
+
 :root[data-theme='dark'] .account-menu {
   box-shadow: -10px 0 28px rgba(0, 0, 0, 0.28), 0 24px 48px rgba(0, 0, 0, 0.34);
 }
@@ -2849,6 +2853,23 @@ button:disabled {
 
 .search-header-card .refine-chips {
   margin-bottom: 4px;
+}
+
+.results-capability-note {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.results-capability-note a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.results-capability-note a:hover,
+.results-capability-note a:focus-visible {
+  text-decoration: underline;
 }
 
 .definition-header {

@@ -140,9 +140,9 @@ export function SystemTracePanel({ trace }: { trace: SystemTraceData }) {
                   <br />
                   {trace.capabilities.deepSearchAllowed
                     ? trace.capabilities.deepSearchApplied
-                      ? 'Deep search applied'
-                      : 'Deep search available'
-                    : 'Deep search unavailable'}
+                      ? 'Broader retrieval applied before ranking'
+                      : 'Available, but not applied to this query'
+                    : 'Unavailable on the current plan'}
                 </dd>
               </div>
             ) : null}

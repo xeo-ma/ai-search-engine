@@ -902,6 +902,11 @@ export default function SearchPage() {
                 ))}
               </div>
             ) : null}
+            {accountState.authenticated && plan === 'free' ? (
+              <p className="results-capability-note">
+                Pro adds deeper retrieval before ranking for difficult queries. <a href="/billing">View billing</a>
+              </p>
+            ) : null}
           </section>
 
           {resultsLoading ? (

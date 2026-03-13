@@ -13,8 +13,8 @@ interface BillingPageProps {
 }
 
 const PRO_BENEFITS = [
-  'Deep search across a broader retrieval set',
-  'Server-enforced Pro entitlement and preference sync',
+  'Broader candidate gathering before ranking on difficult queries',
+  'Deep search preference synced to your account',
   'Managed billing and invoice history through Stripe',
 ];
 
@@ -117,7 +117,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
 
   const statusMessage = useMemo(() => {
     if (billingState === 'return' && isPro) {
-      return 'Pro is now active. Billing is managed through Stripe.';
+      return 'Pro is now active. Deeper retrieval is available for harder queries.';
     }
 
     if (billingState === 'return' && isFree) {
@@ -160,7 +160,9 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
           </Link>
           <p className="billing-eyebrow">Billing</p>
           <h1>Subscription and billing</h1>
-          <p className="billing-subcopy">Manage your subscription, upgrade your plan, and securely update your payment details.</p>
+          <p className="billing-subcopy">
+            Manage your subscription, understand what Pro unlocks, and securely update your payment details.
+          </p>
         </header>
 
         {statusMessage ? <div className="billing-status-banner">{statusMessage}</div> : null}
@@ -177,8 +179,8 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
             <p className="billing-card-copy">
               {isAuthenticated
                 ? isPro
-                  ? 'Your account is on Pro and managed through Stripe.'
-                  : 'Your account is currently on the free plan.'
+                  ? 'Your account is on Pro. Deep search can gather a broader candidate set before ranking.'
+                  : 'Your account is on the free plan. Pro adds deeper retrieval for harder queries.'
                 : 'Sign in to view or change the billing state for your account.'}
             </p>
             {isAuthenticated && accountState.email ? <p className="billing-card-meta">Signed in as {accountState.email}</p> : null}
@@ -212,6 +214,9 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
                 <li key={benefit}>{benefit}</li>
               ))}
             </ul>
+            <p className="billing-card-copy">
+              Pro is intended for queries that benefit from a broader retrieval pass before the final ranking and summary.
+            </p>
             {isAuthenticated && isFree ? <p className="billing-card-meta">Upgrade in-app with wallet support or the standard payment form below.</p> : null}
           </article>
         </div>
