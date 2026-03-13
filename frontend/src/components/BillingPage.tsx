@@ -30,7 +30,8 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
   const isAuthenticated = accountState.authenticated;
   const isPro = accountState.plan === 'pro';
   const isFree = accountState.plan === 'free';
-  const shouldShowCheckout = isAuthenticated && isFree;
+  const isAwaitingProConfirmation = billingState === 'success' && isFree;
+  const shouldShowCheckout = isAuthenticated && isFree && !isAwaitingProConfirmation;
 
   useEffect(() => {
     if (!shouldShowCheckout) {
@@ -80,7 +81,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
     async function pollAccountState() {
       setIsRefreshingPlan(true);
 
-      for (let attempt = 0; attempt < 5; attempt += 1) {
+      for (let attempt = 0; attempt < 15; attempt += 1) {
         try {
           const nextAccountState = await fetchAccountState();
           if (!isMounted) {
@@ -96,7 +97,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
           }
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 1800));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
         if (cancelled) {
           return;
         }
@@ -118,8 +119,8 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
   const statusMessage = useMemo(() => {
     if (billingState === 'success' && isFree) {
       return isRefreshingPlan
-        ? 'Payment submitted. Waiting for subscription confirmation from billing...'
-        : 'Payment was submitted, but Pro has not been confirmed yet. Refresh in a moment if needed.';
+        ? 'Payment submitted. Confirming Pro access now...'
+        : 'Payment was submitted, but Pro has not been confirmed yet. It should update automatically shortly.';
     }
 
     if (billingState === 'cancelled') {
@@ -176,19 +177,23 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
             <div className="billing-card-header">
               <div>
                 <p className="billing-card-label">Current plan</p>
-                <h2>{isPro ? 'Pro' : 'Free'}</h2>
+                <h2>{isPro ? 'Pro' : isAwaitingProConfirmation ? 'Confirming Pro' : 'Free'}</h2>
               </div>
-              <span className={`billing-plan-pill${isPro ? ' is-pro' : ''}`}>{isPro ? 'Active' : 'Current Plan'}</span>
+              <span className={`billing-plan-pill${isPro ? ' is-pro' : ''}`}>
+                {isPro ? 'Active' : isAwaitingProConfirmation ? 'Updating' : 'Current Plan'}
+              </span>
             </div>
             <p className="billing-card-copy">
               {isAuthenticated
                 ? isPro
                   ? 'Your account is on Pro. Deep search can gather a broader candidate set before ranking.'
-                  : 'Your account is on the free plan. Pro adds deeper retrieval for harder queries.'
+                  : isAwaitingProConfirmation
+                    ? 'Your payment was received. Pro access is being confirmed through billing now.'
+                    : 'Your account is on the free plan. Pro adds deeper retrieval for harder queries.'
                 : 'Sign in to view or change the billing state for your account.'}
             </p>
             {isAuthenticated && accountState.email ? <p className="billing-card-meta">Signed in as {accountState.email}</p> : null}
-            {isAuthenticated && isFree && accountState.freeSearchesRemaining !== null ? (
+            {isAuthenticated && isFree && !isAwaitingProConfirmation && accountState.freeSearchesRemaining !== null ? (
               <p className="billing-card-meta">{accountState.freeSearchesRemaining} free searches remaining today.</p>
             ) : null}
             {isAuthenticated && isPro ? (
