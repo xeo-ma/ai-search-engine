@@ -686,9 +686,6 @@ export default function SearchPage() {
       <header className="app-shell-bar">
         <div className={`app-shell-inner${isResultsView && showStickySearch ? ' app-shell-inner-with-search' : ''}`}>
           <a href="/" className="app-shell-brand" aria-label="Go to Lens home">
-            <span className="app-shell-brand-mark" aria-hidden="true">
-              L
-            </span>
             <span className="app-shell-brand-text">Lens</span>
           </a>
           {isResultsView && showStickySearch ? (

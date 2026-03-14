@@ -156,24 +156,10 @@ main {
 .app-shell-brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
   color: var(--text);
   text-decoration: none;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.app-shell-brand-mark {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9px;
-  background: #e9f1fb;
-  color: var(--primary);
-  font-size: 0.92rem;
   font-weight: 700;
+  letter-spacing: -0.035em;
 }
 
 .app-shell-search {
@@ -218,7 +204,10 @@ main {
 }
 
 .app-shell-brand-text {
-  font-size: 0.98rem;
+  display: inline-block;
+  font-size: 1.08rem;
+  line-height: 0.98;
+  white-space: nowrap;
 }
 
 .landing-layout {
@@ -1697,11 +1686,6 @@ main {
 :root[data-theme='dark'] .app-shell-bar {
   background: rgba(11, 16, 23, 0.9);
   border-bottom-color: rgba(29, 42, 56, 0.95);
-}
-
-:root[data-theme='dark'] .app-shell-brand-mark {
-  background: #162334;
-  color: #8fc1ff;
 }
 
 :root[data-theme='dark'] .settings-menu {
@@ -3383,7 +3367,7 @@ button:disabled {
   }
 
   .app-shell-brand-text {
-    display: none;
+    font-size: 0.98rem;
   }
 
   .app-shell-search .search-bar {
