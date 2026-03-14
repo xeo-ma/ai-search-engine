@@ -17,6 +17,7 @@ const PRO_BENEFITS = [
   'Sync preferences across your devices',
   'Managed billing and invoice history through Stripe',
 ];
+const PRO_MONTHLY_PRICE = '$20.00';
 
 function formatBillingDate(dateString: string | null): string | null {
   if (!dateString) {
@@ -198,7 +199,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
               </Link>
               <button
                 type="button"
-                className="billing-secondary-button"
+                className="billing-secondary-button billing-secondary-button-strong"
                 disabled={isOpeningPortal}
                 onClick={() => void handleManageBilling()}
               >
@@ -239,11 +240,9 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
             </div>
             <p className="billing-card-copy">
               {isAuthenticated
-                ? isPro
-                  ? 'Your account is on the Pro plan. Deep Search can gather a broader candidate set before ranking.'
-                  : isAwaitingProConfirmation
-                    ? 'Your payment was received. Pro access is being confirmed through billing now.'
-                    : 'Your account is on the Free plan. Pro adds deeper retrieval for harder queries.'
+                ? isAwaitingProConfirmation
+                  ? 'Your payment was received. Pro access is being confirmed through billing now.'
+                  : 'Use this page to review your billing status and manage the current subscription on your account.'
                 : 'Sign in to view or change the billing state for your account.'}
             </p>
             {isAuthenticated && accountState.email ? <p className="billing-card-meta">Signed in as {accountState.email}</p> : null}
@@ -252,17 +251,22 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
             ) : null}
             {isAuthenticated && isPro && accountState.cancelAtPeriodEnd && cancellationDate ? (
               <p className="billing-card-meta">
-                Cancellation scheduled. Pro access remains active until {cancellationDate}.
+                Cancellation scheduled. Pro access remains active until {cancellationDate}. No further charges will be made after that date.
               </p>
             ) : null}
             {isAuthenticated && isPro && renewalDate ? (
-              <p className="billing-card-meta">Renews on {renewalDate}.</p>
+              <p className="billing-card-meta">Your plan renews on {renewalDate} for {PRO_MONTHLY_PRICE}.</p>
             ) : null}
             {isAuthenticated && isFree && !isAwaitingProConfirmation && accountState.freeSearchesRemaining !== null ? (
               <p className="billing-card-meta">{accountState.freeSearchesRemaining} free searches remaining today.</p>
             ) : null}
             {isAuthenticated && isPro ? (
-              <button type="button" className="billing-secondary-button" disabled={isOpeningPortal} onClick={() => void handleManageBilling()}>
+              <button
+                type="button"
+                className="billing-secondary-button billing-secondary-button-strong"
+                disabled={isOpeningPortal}
+                onClick={() => void handleManageBilling()}
+              >
                 {isOpeningPortal ? 'Opening portal...' : 'Manage billing'}
               </button>
             ) : null}
