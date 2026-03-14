@@ -48,6 +48,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
   const isPro = accountState.plan === 'pro';
   const isFree = accountState.plan === 'free';
   const cancellationDate = formatBillingDate(accountState.currentPeriodEnd);
+  const renewalDate = isPro && !accountState.cancelAtPeriodEnd ? cancellationDate : null;
   const isAwaitingProConfirmation = billingState === 'success' && isFree;
   const didConfirmationTimeout = billingState === 'success' && isFree && !isRefreshingPlan;
   const shouldShowCheckout = isAuthenticated && isFree && !isAwaitingProConfirmation;
@@ -230,7 +231,7 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
             <div className="billing-card-header">
               <div>
                 <p className="billing-card-label">Current plan</p>
-                <h2>{isPro ? 'Pro' : isAwaitingProConfirmation ? 'Confirming Pro' : 'Free'}</h2>
+                <h2>{isPro ? 'Pro plan' : isAwaitingProConfirmation ? 'Confirming Pro' : 'Free plan'}</h2>
               </div>
               <span className={`billing-plan-pill${isPro ? ' is-pro' : ''}`}>
                 {isPro ? 'Active' : isAwaitingProConfirmation ? 'Updating' : 'Current Plan'}
@@ -239,17 +240,23 @@ export function BillingPage({ initialAccountState, billingState }: BillingPagePr
             <p className="billing-card-copy">
               {isAuthenticated
                 ? isPro
-                  ? 'Your account is on Pro. Deep search can gather a broader candidate set before ranking.'
+                  ? 'Your account is on the Pro plan. Deep Search can gather a broader candidate set before ranking.'
                   : isAwaitingProConfirmation
                     ? 'Your payment was received. Pro access is being confirmed through billing now.'
-                    : 'Your account is on the free plan. Pro adds deeper retrieval for harder queries.'
+                    : 'Your account is on the Free plan. Pro adds deeper retrieval for harder queries.'
                 : 'Sign in to view or change the billing state for your account.'}
             </p>
             {isAuthenticated && accountState.email ? <p className="billing-card-meta">Signed in as {accountState.email}</p> : null}
+            {isAuthenticated && isPro && accountState.subscriptionStatus ? (
+              <p className="billing-card-meta">Subscription status: {accountState.subscriptionStatus}</p>
+            ) : null}
             {isAuthenticated && isPro && accountState.cancelAtPeriodEnd && cancellationDate ? (
               <p className="billing-card-meta">
                 Cancellation scheduled. Pro access remains active until {cancellationDate}.
               </p>
+            ) : null}
+            {isAuthenticated && isPro && renewalDate ? (
+              <p className="billing-card-meta">Renews on {renewalDate}.</p>
             ) : null}
             {isAuthenticated && isFree && !isAwaitingProConfirmation && accountState.freeSearchesRemaining !== null ? (
               <p className="billing-card-meta">{accountState.freeSearchesRemaining} free searches remaining today.</p>

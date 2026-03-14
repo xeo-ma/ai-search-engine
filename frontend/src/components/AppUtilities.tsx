@@ -18,6 +18,7 @@ interface AppUtilitiesProps {
   onRunHistory: (query: string) => void;
   onClearHistory: () => void;
   authenticated: boolean;
+  plan: 'free' | 'pro';
   email: string | null;
   deepSearchEnabled: boolean;
   deepSearchAvailable: boolean;
@@ -138,6 +139,7 @@ export function AppUtilities({
   onRunHistory,
   onClearHistory,
   authenticated,
+  plan,
   email,
   deepSearchEnabled,
   deepSearchAvailable,
@@ -346,6 +348,7 @@ export function AppUtilities({
               <AccountMenu
                 authenticated={authenticated}
                 email={email}
+                plan={plan}
                 pendingAccountAction={pendingAccountAction}
                 accountActionError={accountActionError}
                 onSignIn={() => {

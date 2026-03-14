@@ -1096,6 +1096,31 @@ main {
   gap: 6px;
 }
 
+.account-menu-summary {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 6px;
+}
+
+.account-menu-email,
+.account-menu-plan {
+  margin: 0;
+}
+
+.account-menu-email {
+  color: var(--text);
+  font-size: 0.94rem;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.account-menu-plan {
+  color: #6b7b91;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
 .settings-menu-label {
   margin: 0;
   color: #66768d;
@@ -1771,6 +1796,7 @@ main {
 :root[data-theme='dark'] .history-item-time,
 :root[data-theme='dark'] .settings-menu-help,
 :root[data-theme='dark'] .account-menu-help,
+:root[data-theme='dark'] .account-menu-plan,
 :root[data-theme='dark'] .summary-source-domain,
 :root[data-theme='dark'] .summary-top-source-domain,
 :root[data-theme='dark'] .result-domain,
@@ -2099,6 +2125,10 @@ main {
 :root[data-theme='dark'] .account-menu-action,
 :root[data-theme='dark'] .account-menu-action-secondary {
   color: #b9c7d6;
+}
+
+:root[data-theme='dark'] .account-menu-email {
+  color: #eef4fb;
 }
 
 :root[data-theme='dark'] .account-menu-action:hover,

@@ -1,6 +1,7 @@
 interface AccountMenuProps {
   authenticated: boolean;
   email: string | null;
+  plan: 'free' | 'pro';
   pendingAccountAction: null | 'signin' | 'signout' | 'billing';
   accountActionError: string | null;
   onSignIn: () => void;
@@ -11,6 +12,7 @@ interface AccountMenuProps {
 export function AccountMenu({
   authenticated,
   email,
+  plan,
   pendingAccountAction,
   accountActionError,
   onSignIn,
@@ -21,7 +23,14 @@ export function AccountMenu({
     <div className="account-menu" role="menu" aria-label="Account menu">
       <div className="account-menu-section">
         <p className="account-menu-label">Account</p>
-        {authenticated && email ? <p className="account-menu-help">Signed in as {email}</p> : null}
+        {authenticated ? (
+          <div className="account-menu-summary">
+            {email ? <p className="account-menu-email">{email}</p> : null}
+            <p className="account-menu-plan">{plan === 'pro' ? 'Pro plan' : 'Free plan'}</p>
+          </div>
+        ) : (
+          <p className="account-menu-help">Sign in to manage billing and account access.</p>
+        )}
         {authenticated ? (
           <button type="button" className="account-menu-action" disabled={pendingAccountAction !== null} onClick={onBilling}>
             {pendingAccountAction === 'billing' ? 'Opening billing...' : 'Billing'}
