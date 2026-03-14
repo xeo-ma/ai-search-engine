@@ -706,7 +706,7 @@ export default function SearchPage() {
       {!isResultsView ? (
         <section className="landing-search">
           <div className="landing-hero stack">
-            <p className="landing-eyebrow">Verifiable search engine</p>
+            <p className="landing-eyebrow">Verifiable search</p>
             <div className="stack landing-copy">
               <h1>Search with evidence</h1>
               <p className="landing-subheading">Answers grounded in real sources.</p>
@@ -716,7 +716,7 @@ export default function SearchPage() {
               onChange={setQuery}
               onSubmit={onSearch}
               loading={resultsLoading}
-              placeholder="Search with evidence"
+              placeholder="Search the web"
             />
             {searchGateMessage ? <p className="error">{searchGateMessage}</p> : null}
             <div className="landing-suggestion-block stack">
@@ -777,6 +777,7 @@ export default function SearchPage() {
             <>
               <section className="card stack">
                 <h2>Summary</h2>
+                <p className="results-loading-copy">Gathering sources and preparing an evidence-backed answer.</p>
                 <div className="summary-skeleton stack" aria-label="Summary loading">
                   <span className="skeleton-line" />
                   <span className="skeleton-line" />
@@ -785,6 +786,7 @@ export default function SearchPage() {
               </section>
               <section className="card stack">
                 <h2>Results</h2>
+                <p className="results-loading-copy">Ranking candidate sources for the strongest evidence.</p>
                 <div className="results-skeleton-list stack" aria-label="Results loading">
                   {Array.from({ length: 3 }).map((_, index) => (
                     <div key={index} className="results-skeleton-item stack">

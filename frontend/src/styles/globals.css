@@ -143,7 +143,7 @@ main {
 }
 
 .app-shell-inner {
-  max-width: 1120px;
+  max-width: 1060px;
   height: 100%;
   margin: 0 auto;
   padding: 0 clamp(24px, 3vw, 32px);
@@ -222,7 +222,7 @@ main {
 }
 
 .landing-search {
-  width: min(920px, 100%);
+  width: min(980px, 100%);
   text-align: center;
   margin-top: clamp(32px, 6vh, 72px);
 }
@@ -976,7 +976,7 @@ main {
 }
 
 .landing-search .search-bar {
-  max-width: 860px;
+  max-width: 920px;
   margin: 0 auto;
   gap: 14px;
   --search-control-height: 62px;
@@ -2352,9 +2352,9 @@ button {
 }
 
 .landing-suggestion-chip:hover:not(:disabled) {
-  background: #ffffff;
-  border-color: #bed0e6;
-  box-shadow: 0 10px 20px rgba(23, 33, 47, 0.08);
+  background: #f5f9ff;
+  border-color: #a9c3e3;
+  box-shadow: 0 10px 20px rgba(23, 33, 47, 0.06);
   transform: translateY(-1px);
 }
 
@@ -2541,6 +2541,13 @@ button:disabled {
 
 .summary-skeleton {
   gap: 10px;
+}
+
+.results-loading-copy {
+  margin: -4px 0 2px;
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.5;
 }
 
 .results-skeleton-list {
