@@ -23,6 +23,7 @@ import {
   type SearchResponse,
 } from '../lib/api-client';
 import { useSearchPersistence } from '../lib/use-search-persistence';
+import styles from './search-workspace.module.css';
 
 const EMPTY_RESPONSE: SearchResponse = {
   query: '',
@@ -682,7 +683,7 @@ export default function SearchPage() {
   }
 
   return (
-    <>
+    <div className={styles.searchWorkspace}>
       <header className="app-shell-bar">
         <div className={`app-shell-inner${isResultsView && showStickySearch ? ' app-shell-inner-with-search' : ''}`}>
           <a href="/" className="app-shell-brand" aria-label="Go to Lens home">
@@ -860,6 +861,6 @@ export default function SearchPage() {
         </>
       )}
       </main>
-    </>
+    </div>
   );
 }
