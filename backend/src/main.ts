@@ -8,9 +8,13 @@ import { createApp } from './app.js';
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDir = path.dirname(currentFilePath);
 const projectRootEnvPath = path.resolve(currentDir, '../../.env');
+const backendLocalEnvPath = path.resolve(currentDir, '../.env.local');
+const projectRootLocalEnvPath = path.resolve(currentDir, '../../.env.local');
 
 dotenv.config();
 dotenv.config({ path: projectRootEnvPath });
+dotenv.config({ path: backendLocalEnvPath, override: true });
+dotenv.config({ path: projectRootLocalEnvPath, override: true });
 
 const host = process.env.HOST ?? '0.0.0.0';
 const port = Number(process.env.PORT ?? 3001);
