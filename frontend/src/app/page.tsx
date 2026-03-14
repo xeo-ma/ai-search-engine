@@ -709,18 +709,17 @@ export default function SearchPage() {
             <p className="landing-eyebrow">Verifiable search engine</p>
             <div className="stack landing-copy">
               <h1>Search with evidence</h1>
-              <p className="landing-subheading">Verifiable answers grounded in source links.</p>
+              <p className="landing-subheading">Answers grounded in real sources.</p>
             </div>
             <SearchBar
               value={query}
               onChange={setQuery}
               onSubmit={onSearch}
               loading={resultsLoading}
-              placeholder="Ask anything..."
+              placeholder="Search with evidence"
             />
             {searchGateMessage ? <p className="error">{searchGateMessage}</p> : null}
             <div className="landing-suggestion-block stack">
-              <p className="landing-suggestion-label">Try a grounded query</p>
               <div className="landing-suggestion-chips" aria-label="Suggested example searches">
                 {HOMEPAGE_SUGGESTED_QUERIES.map((suggestion) => (
                   <button
@@ -775,9 +774,33 @@ export default function SearchPage() {
           </section>
 
           {resultsLoading ? (
-            <section className="card">
-              <p className="muted">Searching...</p>
-            </section>
+            <>
+              <section className="card stack">
+                <h2>Summary</h2>
+                <div className="summary-skeleton stack" aria-label="Summary loading">
+                  <span className="skeleton-line" />
+                  <span className="skeleton-line" />
+                  <span className="skeleton-line skeleton-line-short" />
+                </div>
+              </section>
+              <section className="card stack">
+                <h2>Results</h2>
+                <div className="results-skeleton-list stack" aria-label="Results loading">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="results-skeleton-item stack">
+                      <div className="results-skeleton-title-row">
+                        <span className="results-skeleton-favicon" />
+                        <span className="skeleton-line results-skeleton-title" />
+                      </div>
+                      <span className="skeleton-line results-skeleton-domain" />
+                      <span className="skeleton-line" />
+                      <span className="skeleton-line" />
+                      <span className="skeleton-line skeleton-line-short" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </>
           ) : null}
 
           <ErrorState message={error} />

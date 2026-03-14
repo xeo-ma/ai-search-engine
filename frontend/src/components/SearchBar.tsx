@@ -15,7 +15,7 @@ export function SearchBar({
   onSubmit,
   loading,
   compact = false,
-  placeholder = 'Search the web',
+  placeholder = 'Search with evidence',
 }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const hasValue = value.trim().length > 0;
